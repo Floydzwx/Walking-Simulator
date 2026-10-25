@@ -1,0 +1,1955 @@
+<!DOCTYPE html>
+<!-- saved from url=(0089)https://abd490f7d073a4260.apps.workbuddy.host/walking-simulator.html?sharecode=KHAVF4PK6I -->
+<html lang="zh-CN" data-immersive-translate-page-theme="dark"><div id="__caoliao-browser-ext-root"></div><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>走路模拟器 · Walking Simulator</title>
+<style>
+:root{
+  --bg:#0a0c11; --p1:#141a24; --p2:#1d2532; --p3:#0e1319; --line:#2c3446;
+  --txt:#dde5f2; --dim:#8b97ad; --acc:#7ee787; --acc2:#ffb454; --danger:#ff6b6b; --blue:#6aa9ff;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--txt);
+  font:14px/1.45 system-ui,-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  -webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+#app{height:100%;display:flex;flex-direction:column}
+button,input,select,textarea{font:inherit;color:var(--txt)}
+button{background:var(--p2);border:1px solid var(--line);border-radius:6px;padding:5px 9px;cursor:pointer}
+button:hover{border-color:#41506b}
+button.on{background:#24405e;border-color:var(--acc);color:#eafff0}
+button.primary{background:#1e4b32;border-color:var(--acc);color:#eafff0}
+button.danger{background:#4a1e22;border-color:#7a3038}
+button:active{transform:translateY(1px)}
+input,select,textarea{background:var(--p3);border:1px solid var(--line);border-radius:5px;padding:4px 6px;width:100%;min-width:0}
+input[type=number]{width:64px;flex:0 0 auto}
+input[type=range]{width:100%;padding:0}
+input[type=checkbox]{width:auto;flex:0 0 auto}
+label{color:var(--dim);font-size:12px}
+.hidden{display:none !important}
+
+#topbar{display:flex;align-items:center;gap:8px;padding:6px 10px;background:#11151d;border-bottom:2px solid #232a38;flex:0 0 auto;flex-wrap:wrap}
+.brand{font-weight:800;letter-spacing:2px;color:var(--acc2)}
+.tabs{display:flex;gap:6px}
+.topActions{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+.view{flex:1 1 auto;min-height:0;position:relative}
+
+/* ---------- 编辑器 ---------- */
+#viewEdit{display:flex;gap:8px;padding:8px;background:var(--bg)}
+.panel{width:270px;flex:0 0 auto;overflow:auto;background:var(--p1);border:1px solid var(--line);border-radius:8px;padding:8px}
+.panel.wide{width:330px}
+.psec{border:1px solid var(--line);border-radius:8px;padding:8px;margin-bottom:8px;background:#121822}
+.ph{font-weight:700;color:var(--acc2);font-size:12px;letter-spacing:1px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
+.row{display:flex;gap:6px;align-items:center;margin:4px 0;flex-wrap:wrap}
+.row>label{flex:0 0 auto;min-width:52px}
+.row>span{font-size:12px;color:var(--dim)}
+.grow{flex:1 1 auto;min-width:60px}
+.tools{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.tool{text-align:left}
+.list{max-height:190px;overflow:auto;border:1px solid var(--line);border-radius:6px;margin-bottom:6px}
+.list .item{padding:5px 7px;border-bottom:1px solid #202836;cursor:pointer;display:flex;justify-content:space-between;gap:6px;align-items:center;font-size:13px}
+.list .item:last-child{border-bottom:none}
+.list .item.sel{background:#22364f}
+.list .item .sub{color:var(--dim);font-size:11px}
+.hint{color:var(--dim);font-size:11px;line-height:1.5;margin-top:5px}
+#editStage{flex:1 1 auto;position:relative;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#0c1017}
+#editCanvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:crosshair;touch-action:none}
+#editBadge{position:absolute;left:8px;top:8px;background:rgba(10,14,20,.75);border:1px solid var(--line);
+  border-radius:6px;padding:3px 8px;font-size:12px;color:var(--dim);pointer-events:none}
+.mini{width:34px;height:34px;object-fit:cover;border:1px solid var(--line);border-radius:4px;background:#000;flex:0 0 auto}
+.imgslot{width:52px;height:52px;border:1px dashed var(--line);border-radius:6px;display:flex;align-items:center;
+  justify-content:center;font-size:11px;color:var(--dim);cursor:pointer;background:#0e1319;position:relative;overflow:hidden}
+.imgslot img{width:100%;height:100%;object-fit:cover}
+.slots{display:flex;gap:6px;flex-wrap:wrap}
+.slots .cap{font-size:11px;color:var(--dim);text-align:center}
+.field{margin:5px 0}
+.flexwrap{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+kbd{background:#0e1319;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;font-size:11px}
+
+/* ---------- 游玩 ---------- */
+#viewPlay{background:#000}
+#playCanvas{position:absolute;inset:0;width:100%;height:100%;display:block;background:#05070a;touch-action:none}
+#hud{position:absolute;inset:0;pointer-events:none}
+#hud>*{pointer-events:auto}
+#hudTop{position:absolute;left:10px;top:10px;display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.tag{background:rgba(10,14,20,.62);border:1px solid #2c3446;border-radius:6px;padding:3px 9px;font-size:13px}
+#minimapWrap{position:absolute;right:10px;top:10px;text-align:center}
+#minimap{background:rgba(8,11,16,.72);border:1px solid #34405a;border-radius:8px;display:block}
+#layerTag{font-size:11px;color:var(--dim);margin-top:2px}
+#hudBottom{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-between;align-items:flex-end;
+  padding:10px 12px calc(10px + env(safe-area-inset-bottom));gap:10px}
+#dpad{display:grid;grid-template-columns:repeat(3,66px);grid-template-rows:repeat(2,60px);gap:6px}
+#dpad button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-size:20px;line-height:1;padding:0}
+#dpad button span{font-size:11px;color:var(--dim)}
+#dpad [data-act=left]{grid-area:2/1}
+#dpad [data-act=fwd]{grid-area:1/2}
+#dpad [data-act=back]{grid-area:2/2}
+#dpad [data-act=right]{grid-area:2/3}
+#sideBtns{display:grid;grid-template-columns:repeat(2,60px);gap:6px}
+#sideBtns button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-size:19px;height:56px;padding:0}
+#sideBtns button span{font-size:10px;color:var(--dim)}
+#sideBtns button.warn{border-color:var(--acc2)}
+#hintBar{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(100% + 6px);font-size:12px;color:#cfd8e8;
+  background:rgba(10,14,20,.6);border:1px solid #2c3446;border-radius:14px;padding:2px 10px;white-space:nowrap}
+
+/* ---------- 弹窗 / 提示 ---------- */
+#modalRoot{position:fixed;inset:0;background:rgba(4,6,10,.8);display:none;align-items:center;justify-content:center;
+  z-index:60;padding:10px}
+#modalRoot.show{display:flex}
+.modal{background:var(--p1);border:1px solid var(--line);border-radius:10px;width:100%;max-width:min(780px,96vw);
+  max-height:86vh;overflow:auto;padding:14px}
+.modal h3{margin:0 0 8px;font-size:16px;color:var(--acc2)}
+.modal .mfoot{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.card{border:1px solid var(--line);border-radius:8px;padding:8px;background:#121822}
+.slotGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px}
+.slot{border:1px solid var(--line);border-radius:8px;padding:6px;text-align:center;background:#121822;cursor:pointer;font-size:12px}
+.slot.sel{border-color:var(--acc)}
+.slot .ic{font-size:26px;height:40px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.slot .ic img{max-width:100%;max-height:40px;object-fit:contain}
+.slot .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot .qty{color:var(--dim);font-size:11px}
+#toast{position:fixed;left:50%;bottom:150px;transform:translateX(-50%);background:rgba(10,14,20,.92);
+  border:1px solid #34405a;padding:6px 14px;border-radius:20px;opacity:0;transition:opacity .25s;pointer-events:none;
+  z-index:70;font-size:13px;white-space:nowrap;max-width:90vw;overflow:hidden;text-overflow:ellipsis}
+#toast.show{opacity:1}
+#app.playing #topbar{display:none}
+#shockRoot{position:fixed;inset:0;z-index:80;display:none;background:radial-gradient(circle at 50% 45%,#2a0000 0%,#000 70%);align-items:center;justify-content:center;flex-direction:column}
+#shockRoot.show{display:flex}
+#shockImg{max-width:100%;max-height:78vh;object-fit:contain}
+#shockRoot .cap{color:#fff;font-size:64px;letter-spacing:10px;margin:12px;text-shadow:0 0 30px #ff0000,0 0 8px #fff;animation:bl .55s infinite;font-weight:800}
+@keyframes bl{50%{opacity:.25}}
+#hitFlash{position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle,transparent 40%,rgba(255,0,0,.55));opacity:0;transition:opacity .18s}
+
+@media (max-width:760px){
+  #viewEdit{flex-direction:column;overflow:auto;padding:6px}
+  #editStage{order:-1;flex:0 0 50vh;min-height:260px}
+  .panel{width:100%;max-height:none;overflow:visible}
+  #topbar{gap:6px;padding:5px 6px}
+  .brand{font-size:13px;letter-spacing:1px}
+  .topActions button,.tabs button{padding:5px 7px;font-size:12px}
+}
+@media (max-width:820px){
+  .panel{width:230px}
+  .panel.wide{width:250px}
+  #dpad{grid-template-columns:repeat(3,58px);grid-template-rows:repeat(2,54px)}
+  #sideBtns{grid-template-columns:repeat(2,52px)}
+  #sideBtns button{height:50px}
+  #minimap{width:120px;height:120px}
+}
+</style>
+</head>
+<body style="zoom: 1;">
+<div id="app">
+  <div id="topbar">
+    <div class="brand">走路模拟器</div>
+    <div class="tabs">
+      <button id="tabEdit" class="on">编辑</button>
+      <button id="tabPlay">游玩</button>
+    </div>
+    <div class="topActions">
+      <button id="btnSave">保存</button>
+      <button id="btnExport">导出</button>
+      <button id="btnImport">导入</button>
+      <button id="btnNet">联机</button>
+      <button id="btnHelp">帮助</button>
+    </div>
+  </div>
+
+  <!-- ============ 编辑器 ============ -->
+  <section id="viewEdit" class="view">
+    <div class="panel">
+      <div class="psec">
+        <div class="ph">工具</div>
+        <div class="tools">
+          <button class="tool on" data-tool="photo">🖼 照片</button>
+          <button class="tool" data-tool="wall">🧱 墙</button>
+          <button class="tool" data-tool="portal">🌀 楼层</button>
+          <button class="tool" data-tool="npc">👤 NPC</button>
+          <button class="tool" data-tool="start">🚩 起点</button>
+          <button class="tool" data-tool="erase">🧽 擦除</button>
+        </div>
+        <div class="row"><label>层</label>
+          <button id="layerDown">−</button><input id="layerInput" type="number" value="0"><button id="layerUp">+</button>
+          <span id="layerInfo"></span>
+        </div>
+        <div class="hint" id="toolHint">点格子内侧的一条边 → 上传该方向的照片；右键清除。点格子中间查看四边。</div>
+      </div>
+      <div class="psec">
+        <div class="ph">NPC 列表</div>
+        <div id="npcList" class="list"><div class="item"><span>[NPC] 幽灵</span><span class="sub">L0 0,3</span></div><div class="item"><span>[NPC] 巡逻者</span><span class="sub">L0 3,0</span></div><div class="item"><span>[NPC] 胆小鬼</span><span class="sub">L0 -3,1</span></div><div class="item"><span>[箱] 木箱</span><span class="sub">L0 1,0</span></div><div class="item"><span>[床] 床</span><span class="sub">L0 -1,0</span></div><div class="item"><span>[灯] 路灯</span><span class="sub">L0 2,0</span></div></div>
+        <div class="flexwrap"><button id="addNpc">+ 新建 NPC</button><button id="addChest">+ 箱</button><button id="addBed">+ 床</button><button id="addLamp">+ 灯</button></div>
+      </div>
+      <div class="psec">
+        <div class="ph">物品 / 武器</div>
+        <div id="itemList" class="list"><div class="item"><span>拳头</span><span class="sub">伤害6 距1.2</span></div><div class="item"><span>小刀</span><span class="sub">伤害25 距1.3</span></div><div class="item"><span>铁棍</span><span class="sub">伤害45 距1.9</span></div><div class="item"><span>手电筒</span><span class="sub">工具</span></div><div class="item"><span>医疗包</span><span class="sub">工具</span></div><div class="item"><span>电池</span><span class="sub">工具</span></div></div>
+        <button id="addItem">+ 新建物品</button>
+      </div>
+      <div class="psec">
+        <div class="ph">世界</div>
+        <div class="row"><label>名称</label><input id="mapName" class="grow" placeholder="地图名"></div>
+        <div class="row"><label>昼夜</label><input id="dayLen" type="number" min="20" step="10" value="180"><span>秒/天</span></div>
+        <div class="row"><label>起始</label><input id="startHour" type="number" min="0" max="23" value="9"><span>点</span></div>
+        <div class="row"><label>黑夜</label>
+          <select id="nightMode" class="grow"><option value="auto">自动（昼夜循环）</option><option value="always">强制黑夜</option><option value="off">永远白天</option></select>
+        </div>
+        <div class="row"><label>生命</label><input id="playerHp" type="number" min="1" value="100"></div>
+        <div class="row"><button id="clearLayer">清空本层</button><button id="clearAll" class="danger">清空全部</button></div>
+        <div class="row"><button id="toPlay" class="primary grow">▶ 进入地图</button></div>
+      </div>
+    </div>
+
+    <div id="editStage">
+      <canvas id="editCanvas" width="1286" height="873"></canvas>
+      <div id="editBadge">L0  缩放 0.89  格子 0  NPC 6</div>
+    </div>
+
+    <div class="panel wide" id="inspect"><div class="psec"><div class="ph">格子 (0,0) L0<span class="sub">整格</span></div><div class="slots"><div><div class="imgslot">＋</div><div class="cap">北↑</div></div><div><div class="imgslot">＋</div><div class="cap">东</div></div><div><div class="imgslot">＋</div><div class="cap">南</div></div><div><div class="imgslot">＋</div><div class="cap">西</div></div></div><div class="row"><button>清北</button><button>清东</button><button>清南</button><button>清西</button></div></div><div class="psec"><div class="ph">说明</div><div class="hint"><b>玩法</b>：每个格子有独立的 4 张边照片（不共享）。站在格中朝向哪边就显示哪边照片；左右键原地转向，前后键移动一格。<br><b>楼层</b>：在「🌀 楼层」工具里给某条边设置 ↑/↓，朝那个方向按前进即换层。<br><b>NPC</b>：四面照片 + 行为（随机游走/追击/远离/巡逻轨道）。进入地图后按透视规则叠加显示。<br>快捷键：<kbd>空格+拖拽</kbd>平移，<kbd>滚轮</kbd>缩放，<kbd>右键</kbd>擦除。</div></div></div>
+  </section>
+
+  <!-- ============ 游玩 ============ -->
+  <section id="viewPlay" class="view hidden">
+    <canvas id="playCanvas"></canvas>
+    <div id="hitFlash"></div>
+    <div id="hud">
+      <div id="hudTop">
+        <div class="tag" id="clock">☀ 09:00</div>
+        <div class="tag" id="statusText">体力充沛</div>
+      </div>
+      <div id="minimapWrap">
+        <canvas id="minimap" width="170" height="170"></canvas>
+        <div id="layerTag">L0</div>
+      </div>
+      <div id="hudBottom">
+        <div id="dpad">
+          <button data-act="left">⟲<span>左转</span></button>
+          <button data-act="fwd">↑<span>前进</span></button>
+          <button data-act="back">↓<span>后退</span></button>
+          <button data-act="right">⟳<span>右转</span></button>
+        </div>
+        <div style="position:relative">
+          <div id="hintBar" class="hidden"></div>
+          <div id="sideBtns">
+            <button data-act="attack">⚔<span>攻击</span></button>
+            <button data-act="interact">✋<span>交互</span></button>
+            <button data-act="bag">🎒<span>物品</span></button>
+            <button data-act="torch">🔦<span>手电</span></button>
+            <button data-act="map">🗺<span>地图</span></button>
+            <button data-act="exit">⏏<span>退出</span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<input type="file" id="filePicker" accept="image/*" hidden="">
+<input type="file" id="jsonPicker" accept=".json,application/json" hidden="">
+<div id="modalRoot" class=""></div>
+<div id="shockRoot"><img id="shockImg" alt=""><div class="cap"></div></div>
+<div id="toast"></div>
+
+<script>
+"use strict";
+/* ============================================================
+   走路模拟器 —— 单文件实现
+   P1 基础工具 / 数据模型 / 持久化 / 图片
+   ============================================================ */
+const $  = (s, r) => (r || document).querySelector(s);
+const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+const uid = () => Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-3);
+const DIRS = ['n', 'e', 's', 'w'];
+const DV = { n: { x: 0, y: -1 }, e: { x: 1, y: 0 }, s: { x: 0, y: 1 }, w: { x: -1, y: 0 } };
+const DN = { n: '北', e: '东', s: '南', w: '西' };
+const DARROW = { n: '↑', e: '→', s: '↓', w: '←' };
+const CW  = { n: 'e', e: 's', s: 'w', w: 'n' };
+const CCW = { n: 'w', w: 's', s: 'e', e: 'n' };
+const OPP = { n: 's', s: 'n', e: 'w', w: 'e' };
+const FVEC = { n: [0, -1], e: [1, 0], s: [0, 1], w: [-1, 0] };
+const RVEC = { n: [1, 0], e: [0, 1], s: [-1, 0], w: [0, -1] };
+const DI = d => DIRS.indexOf(d);
+const ck  = (l, x, y) => l + '|' + x + '|' + y;
+const ek  = (l, x, y, d) => l + '|' + x + '|' + y + '|' + d;
+// 墙做规范化存储：只存 "本格东边" 与 "本格南边" 两种
+function wallKey(l, x, y, d) {
+  if (d === 'e') return l + '|' + x + '|' + y + '|e';
+  if (d === 'w') return (l) + '|' + (x - 1) + '|' + y + '|e';
+  if (d === 's') return l + '|' + x + '|' + y + '|s';
+  return l + '|' + x + '|' + (y - 1) + '|s';
+}
+
+/* ---------------- DOM 小工具 ---------------- */
+function h(tag, attrs) {
+  const e = document.createElement(tag);
+  const kids = Array.prototype.slice.call(arguments, 2).flat(3);
+  if (attrs) for (const k in attrs) {
+    const v = attrs[k];
+    if (v === null || v === undefined || v === false) continue;
+    if (k === 'class') e.className = v;
+    else if (k === 'html') e.innerHTML = v;
+    else if (k === 'style') e.setAttribute('style', v);
+    else if (k === 'txt') e.textContent = v;
+    else if (k.slice(0, 2) === 'on') e.addEventListener(k.slice(2).toLowerCase(), v);
+    else if (k === 'value') e.value = v;
+    else if (k === 'checked' || k === 'disabled') e[k] = !!v;
+    else e.setAttribute(k, v);
+  }
+  kids.forEach(k => {
+    if (k === null || k === undefined || k === false) return;
+    e.appendChild((typeof k === 'string' || typeof k === 'number') ? document.createTextNode(String(k)) : k);
+  });
+  return e;
+}
+function clear(e) { while (e.firstChild) e.removeChild(e.firstChild); }
+let toastTimer = null;
+function toast(msg, ms) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), ms || 1600);
+}
+
+/* ---------------- 弹窗 ---------------- */
+function openModal(title, buildFn, opts) {
+  const root = $('#modalRoot'); clear(root);
+  const box = h('div', { class: 'modal' });
+  box.appendChild(h('h3', { txt: title }));
+  const body = h('div', {}); box.appendChild(body);
+  const foot = h('div', { class: 'mfoot' }); box.appendChild(foot);
+  const api = {
+    body, foot, box,
+    close: () => { root.classList.remove('show'); clear(root); if (opts && opts.onClose) opts.onClose(); }
+  };
+  buildFn(api);
+  root.appendChild(box);
+  root.classList.add('show');
+  root.onclick = e => { if (e.target === root && (!opts || opts.closeOnMask !== false)) api.close(); };
+  return api;
+}
+function closeModal() { $('#modalRoot').classList.remove('show'); clear($('#modalRoot')); }
+function confirmBox(title, text, onYes) {
+  openModal(title, m => {
+    m.body.appendChild(h('div', { txt: text }));
+    m.foot.appendChild(h('button', { txt: '取消', onclick: m.close }));
+    m.foot.appendChild(h('button', { class: 'danger', txt: '确定', onclick: () => { m.close(); onYes(); } }));
+  });
+}
+
+/* ---------------- 图片 ---------------- */
+const IMGC = new Map();          // src -> Image
+function getImg(src) {
+  if (!src) return null;
+  let im = IMGC.get(src);
+  if (!im) { im = new Image(); im.src = src; IMGC.set(src, im); }
+  return im;
+}
+const imgOk = src => { const i = getImg(src); return !!i && i.complete && i.naturalWidth > 0; };
+function shrink(file, max, cb) {
+  const fr = new FileReader();
+  fr.onload = () => {
+    const im = new Image();
+    im.onload = () => {
+      let w = im.width, hh = im.height;
+      const s = Math.min(1, max / Math.max(w, hh));
+      w = Math.max(1, Math.round(w * s)); hh = Math.max(1, Math.round(hh * s));
+      const c = document.createElement('canvas'); c.width = w; c.height = hh;
+      c.getContext('2d').drawImage(im, 0, 0, w, hh);
+      cb(c.toDataURL('image/jpeg', 0.82));
+    };
+    im.onerror = () => toast('图片读取失败');
+    im.src = fr.result;
+  };
+  fr.readAsDataURL(file);
+}
+function pickImage(cb, max) {
+  const inp = $('#filePicker'); inp.value = '';
+  inp.onchange = () => { const f = inp.files[0]; if (f) shrink(f, max || 1280, cb); };
+  inp.click();
+}
+function drawCover(ctx, img, x, y, w, hh) {
+  const ir = img.width / img.height, tr = w / hh;
+  let sw = img.width, sh = img.height, sx = 0, sy = 0;
+  if (ir > tr) { sw = img.height * tr; sx = (img.width - sw) / 2; }
+  else { sh = img.width / tr; sy = (img.height - sh) / 2; }
+  ctx.drawImage(img, sx, sy, sw, sh, x, y, w, hh);
+}
+
+/* ---------------- 默认数据 ---------------- */
+function defItem(o) {
+  return Object.assign({
+    id: uid(), name: '物品', glyph: '📦', icon: '', kind: 'normal', tool: '',
+    dmg: 0, range: 0, cd: 0.6, power: 0, desc: ''
+  }, o);
+}
+function defNpc(o) {
+  return Object.assign({
+    id: uid(), name: 'NPC', type: 'normal', imgs: { front: '', left: '', right: '', back: '' },
+    x: 0, y: 0, layer: 0, facing: 'n',
+    behavior: 'idle', speed: 0.8, hp: 60, dmg: 8, range: 1.2, cd: 1.5,
+    hostile: false, jumpscare: '', victory: '',
+    drops: [], chest: [], path: [], pi: 0, hue: (Math.random() * 360) | 0
+  }, o);
+}
+function defState() {
+  return {
+    meta: { name: '未命名地图', v: 1 },
+    settings: { dayLen: 180, startHour: 9, night: 'auto', playerHp: 100, minimap: true },
+    player: { x: 0, y: 0, layer: 0, facing: 'n' },
+    cells: {},    // "l|x|y" -> {n:{img},e,s,w}
+    walls: {},    // 规范化 key -> true
+    portals: {},  // "l|x|y|d" -> 'up'|'down'
+    drops: {},    // "l|x|y" -> [{id,count}]
+    npcs: [],
+    items: [
+      defItem({ name: '拳头', glyph: '✊', kind: 'weapon', dmg: 6, range: 1.2, cd: 0.5, desc: '天生自带' }),
+      defItem({ name: '小刀', glyph: '🔪', kind: 'weapon', dmg: 25, range: 1.3, cd: 0.4, desc: '短兵刃' }),
+      defItem({ name: '铁棍', glyph: '🏏', kind: 'weapon', dmg: 45, range: 1.9, cd: 1.0, desc: '够长' }),
+      defItem({ name: '手电筒', glyph: '🔦', kind: 'tool', tool: 'flashlight', power: 100, desc: '夜里照明，耗电' }),
+      defItem({ name: '医疗包', glyph: '🧰', kind: 'tool', tool: 'heal', power: 50, desc: '恢复体力' }),
+      defItem({ name: '电池', glyph: '🔋', kind: 'tool', tool: 'battery', power: 60, desc: '给手电充电' })
+    ]
+  };
+}
+let S = defState();
+
+/* ---------------- 持久化 ---------------- */
+const LSKEY = 'walksim.v1';
+let saveTimer = null;
+function save(now) {
+  clearTimeout(saveTimer);
+  const doIt = () => {
+    try { localStorage.setItem(LSKEY, JSON.stringify(S)); if (now) toast('已保存到本机'); }
+    catch (e) { toast('保存失败：本机存储可能已满（图片太多）'); }
+  };
+  if (now) doIt(); else saveTimer = setTimeout(doIt, 800);
+}
+function loadStore() {
+  try {
+    const raw = localStorage.getItem(LSKEY);
+    if (!raw) return false;
+    const o = JSON.parse(raw);
+    S = migrate(o);
+    return true;
+  } catch (e) { console.warn(e); return false; }
+}
+function migrate(o) {
+  const d = defState();
+  const s = Object.assign({}, d, o);
+  s.meta = Object.assign({}, d.meta, o.meta || {});
+  s.settings = Object.assign({}, d.settings, o.settings || {});
+  s.player = Object.assign({}, d.player, o.player || {});
+  s.cells = o.cells || {}; s.walls = o.walls || {}; s.portals = o.portals || {}; s.drops = o.drops || {};
+  s.npcs = (o.npcs || []).map(n => Object.assign(defNpc(), n, { imgs: Object.assign({ front: '', left: '', right: '', back: '' }, n.imgs || {}) }));
+  s.items = (o.items || []).length ? o.items.map(i => Object.assign(defItem(), i)) : d.items;
+  return s;
+}
+
+/* ---------------- 地图读写助手 ---------------- */
+const edge = (l, x, y, d) => {
+  const c = S.cells[ck(l, x, y)];
+  return (c && c[d]) || null;
+};
+function setEdge(l, x, y, d, img) {
+  const k = ck(l, x, y);
+  if (!S.cells[k]) S.cells[k] = { n: {}, e: {}, s: {}, w: {} };
+  S.cells[k][d] = { img: img || '' };
+  save();
+}
+function clearEdge(l, x, y, d) {
+  const c = S.cells[ck(l, x, y)];
+  if (c && c[d]) { c[d] = {}; let empty = true; DIRS.forEach(dd => { if (c[dd] && c[dd].img) empty = false; }); if (empty) delete S.cells[ck(l, x, y)]; }
+  delete S.portals[ek(l, x, y, d)];
+  save();
+}
+const hasWall = (l, x, y, d) => !!S.walls[wallKey(l, x, y, d)];
+function toggleWall(l, x, y, d) {
+  const k = wallKey(l, x, y, d);
+  if (S.walls[k]) delete S.walls[k]; else S.walls[k] = true;
+  save();
+}
+function cyclePortal(l, x, y, d) {
+  const k = ek(l, x, y, d), cur = S.portals[k];
+  if (!cur) S.portals[k] = 'up';
+  else if (cur === 'up') S.portals[k] = 'down';
+  else delete S.portals[k];
+  save();
+  return S.portals[k];
+}
+const itemById = id => S.items.find(i => i.id === id) || null;
+const npcById = id => S.npcs.find(n => n.id === id) || null;
+function cellHasContent(l, x, y) {
+  const c = S.cells[ck(l, x, y)];
+  if (c) { for (const d of DIRS) if (c[d] && c[d].img) return true; }
+  return false;
+}
+/* ============================================================
+   P2 地图编辑器：无限正方点阵
+   ============================================================ */
+const EC = { tool: 'photo', layer: 0, zoom: 1, camx: -5.5, camy: -5.5, sel: null, npcSel: null, itemSel: null, rec: false };
+const BANDC = { n: '#3b6ea5', e: '#a5763b', s: '#3ba55c', w: '#7a3ba5' };
+const cs = () => 64 * EC.zoom;
+const w2sx = wx => (wx - EC.camx) * cs();
+const w2sy = wy => (wy - EC.camy) * cs();
+const s2wx = sx => EC.camx + sx / cs();
+const s2wy = sy => EC.camy + sy / cs();
+const TOOLHINT = {
+  photo: '点格子内侧的一条边 → 上传该方向的照片；右键清除。点格子中间查看四边。',
+  wall: '点格子之间的边界线 → 加/去墙。被墙挡住的方向无法前进。',
+  portal: '点某条边 → 循环切换：无 → 上一层 ↑ → 下一层 ↓。朝该方向按前进即可换层。',
+  npc: '先在左侧选中一个 NPC，再点格子放置；点已有 NPC 让它原地转向 90°。',
+  start: '点格子设置玩家初始点；再点一次可旋转初始朝向。',
+  erase: '点边清除照片/传送门，点 NPC 删除，点边界清除墙。'
+};
+
+function bandRect(px, py, s, d) {
+  const t = clamp(s * 0.16, 4, 14), i = 1;
+  if (d === 'n') return [px + i, py + i, s - 2 * i, t];
+  if (d === 's') return [px + i, py + s - i - t, s - 2 * i, t];
+  if (d === 'w') return [px + i, py + i, t, s - 2 * i];
+  return [px + s - i - t, py + i, t, s - 2 * i];
+}
+function hitTest(sx, sy) {
+  const wx = s2wx(sx), wy = s2wy(sy);
+  const cxx = Math.floor(wx), cyy = Math.floor(wy);
+  const fx = wx - cxx, fy = wy - cyy;
+  const b = 0.19;
+  if (fy < b) return { t: 'edge', x: cxx, y: cyy, d: 'n' };
+  if (fx > 1 - b) return { t: 'edge', x: cxx, y: cyy, d: 'e' };
+  if (fy > 1 - b) return { t: 'edge', x: cxx, y: cyy, d: 's' };
+  if (fx < b) return { t: 'edge', x: cxx, y: cyy, d: 'w' };
+  return { t: 'cell', x: cxx, y: cyy };
+}
+function hitWall(sx, sy) {
+  const wx = s2wx(sx), wy = s2wy(sy);
+  const cxx = Math.floor(wx), cyy = Math.floor(wy);
+  const fx = wx - cxx, fy = wy - cyy;
+  const cand = [['n', fy], ['s', 1 - fy], ['w', fx], ['e', 1 - fx]].sort((a, b) => a[1] - b[1]);
+  if (cand[0][1] > 0.17) return null;
+  return { t: 'wall', x: cxx, y: cyy, d: cand[0][0] };
+}
+function npcAt(l, x, y) { return S.npcs.find(n => n.layer === l && n.x === x && n.y === y) || null; }
+
+/* ---------------- 绘制 ---------------- */
+function drawEditor() {
+  const c = $('#editCanvas'); if (!c.clientWidth) return;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const W = c.clientWidth, H = c.clientHeight;
+  if (c.width !== Math.round(W * dpr)) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
+  const ctx = c.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = '#0c1017'; ctx.fillRect(0, 0, W, H);
+  const s = cs(), L = EC.layer;
+  const x0 = Math.floor(EC.camx) - 1, y0 = Math.floor(EC.camy) - 1;
+  const x1 = Math.ceil(EC.camx + W / s) + 1, y1 = Math.ceil(EC.camy + H / s) + 1;
+
+  ctx.strokeStyle = '#18202d'; ctx.lineWidth = 1; ctx.beginPath();
+  for (let x = x0; x <= x1; x++) { const px = w2sx(x); ctx.moveTo(px, w2sy(y0)); ctx.lineTo(px, w2sy(y1 + 1)); }
+  for (let y = y0; y <= y1; y++) { const py = w2sy(y); ctx.moveTo(w2sx(x0), py); ctx.lineTo(w2sx(x1 + 1), py); }
+  ctx.stroke();
+
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+    const px = w2sx(x), py = w2sy(y);
+    const k = ck(L, x, y), cell = S.cells[k];
+    if (x === 0 && y === 0) { ctx.fillStyle = 'rgba(126,231,135,.05)'; ctx.fillRect(px, py, s, s); }
+    if (cell) { ctx.fillStyle = 'rgba(255,255,255,.03)'; ctx.fillRect(px, py, s, s); }
+    // 四条边
+    for (const d of DIRS) {
+      const ed = cell && cell[d];
+      const [bx, by, bw, bh] = bandRect(px, py, s, d);
+      ctx.fillStyle = BANDC[d]; ctx.globalAlpha = ed && ed.img ? 0.15 : 0.4;
+      ctx.fillRect(bx, by, bw, bh); ctx.globalAlpha = 1;
+      if (ed && ed.img && imgOk(ed.img)) { try { drawCover(ctx, getImg(ed.img), bx, by, bw, bh); } catch (e) {} }
+      else if (s > 34) {
+        ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.font = Math.round(clamp(s * .13, 7, 11)) + 'px sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        const cxx = bx + bw / 2, cyy = by + bh / 2;
+        ctx.save(); ctx.translate(cxx, cyy);
+        if (d === 'e' || d === 'w') ctx.rotate(Math.PI / 2);
+        ctx.fillText(DN[d], 0, 0); ctx.restore();
+      }
+      const p = S.portals[ek(L, x, y, d)];
+      if (p) {
+        ctx.fillStyle = p === 'up' ? '#7ee787' : '#ffb454';
+        ctx.font = 'bold ' + Math.round(clamp(s * .22, 9, 18)) + 'px sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(p === 'up' ? '↑' : '↓', bx + bw / 2, by + bh / 2);
+      }
+    }
+    // 墙（只画东、南，避免重复）
+    ctx.strokeStyle = '#ff6b6b'; ctx.lineWidth = Math.max(2, s * 0.07); ctx.lineCap = 'round';
+    ctx.beginPath();
+    if (hasWall(L, x, y, 'e')) { ctx.moveTo(px + s, py); ctx.lineTo(px + s, py + s); }
+    if (hasWall(L, x, y, 's')) { ctx.moveTo(px, py + s); ctx.lineTo(px + s, py + s); }
+    ctx.stroke();
+    // 掉落物
+    const dr = S.drops[k];
+    if (dr && dr.length) { ctx.fillStyle = '#ffb454'; ctx.beginPath(); ctx.arc(px + s * 0.8, py + s * 0.8, clamp(s * .06, 2, 6), 0, 7); ctx.fill(); }
+    // 坐标
+    if (s > 46) { ctx.fillStyle = 'rgba(255,255,255,.22)'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(x + ',' + y, px + s / 2, py + s / 2); }
+  }
+
+  // NPC
+  for (const n of S.npcs) {
+    if (n.layer !== L) continue;
+    const px = w2sx(n.x), py = w2sy(n.y), cxx = px + s / 2, cyy = py + s / 2;
+    if (cxx < -40 || cyy < -40 || cxx > W + 40 || cyy > H + 40) continue;
+    const col = n.type === 'chest' ? '#ffb454' : n.type === 'bed' ? '#6aa9ff' : n.type === 'lamp' ? '#ffd76a' : (n.behavior === 'chase' ? '#ff6b6b' : '#7ee787');
+    drawArrow(ctx, cxx, cyy, s * 0.3, n.facing, col, EC.npcSel === n.id);
+    if (s > 40) {
+      ctx.fillStyle = '#c9d4e6'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.fillText((n.type === 'chest' ? '箱 ' : n.type === 'bed' ? '床 ' : n.type === 'lamp' ? '灯 ' : '') + n.name, cxx, cyy + s * 0.24);
+    }
+    if (EC.npcSel === n.id && n.path && n.path.length > 1) {
+      ctx.strokeStyle = 'rgba(255,180,84,.6)'; ctx.lineWidth = 2; ctx.setLineDash([5, 4]); ctx.beginPath();
+      n.path.forEach((p, i) => { const X = w2sx(p.x) + s / 2, Y = w2sy(p.y) + s / 2; if (p.layer !== L) return; i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); });
+      ctx.stroke(); ctx.setLineDash([]);
+    }
+  }
+  // 起点
+  if (S.player.layer === L) {
+    const px = w2sx(S.player.x), py = w2sy(S.player.y);
+    ctx.strokeStyle = '#7ee787'; ctx.lineWidth = 2; ctx.strokeRect(px + 2, py + 2, s - 4, s - 4);
+    drawArrow(ctx, px + s / 2, py + s / 2, s * 0.34, S.player.facing, '#7ee787', false);
+  }
+  // 选中框
+  if (EC.sel && EC.sel.l === L) {
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.setLineDash([4, 3]);
+    if (EC.sel.t === 'edge') { const [bx, by, bw, bh] = bandRect(w2sx(EC.sel.x), w2sy(EC.sel.y), s, EC.sel.d); ctx.strokeRect(bx - 1, by - 1, bw + 2, bh + 2); }
+    else ctx.strokeRect(w2sx(EC.sel.x) + 1, w2sy(EC.sel.y) + 1, s - 2, s - 2);
+    ctx.setLineDash([]);
+  }
+  $('#editBadge').textContent = 'L' + L + '  缩放 ' + EC.zoom.toFixed(2) + '  格子 ' + Object.keys(S.cells).length + '  NPC ' + S.npcs.length;
+}
+function drawArrow(ctx, cx, cy, r, facing, color, sel) {
+  const a = { n: 0, e: Math.PI / 2, s: Math.PI, w: -Math.PI / 2 }[facing] || 0;
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate(a);
+  ctx.beginPath(); ctx.moveTo(0, -r); ctx.lineTo(r * 0.7, r * 0.7); ctx.lineTo(0, r * 0.3); ctx.lineTo(-r * 0.7, r * 0.7); ctx.closePath();
+  ctx.fillStyle = color; ctx.globalAlpha = sel ? 1 : 0.85; ctx.fill();
+  ctx.globalAlpha = 1; ctx.strokeStyle = sel ? '#fff' : 'rgba(0,0,0,.5)'; ctx.lineWidth = sel ? 2 : 1; ctx.stroke();
+  ctx.restore();
+}
+
+/* ---------------- 交互 ---------------- */
+const ptrs = new Map();
+let drag = null;
+function canvasPos(e) { const r = $('#editCanvas').getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
+function bindEditorCanvas() {
+  const c = $('#editCanvas');
+  c.addEventListener('pointerdown', e => {
+    c.setPointerCapture(e.pointerId);
+    const p = canvasPos(e); ptrs.set(e.pointerId, p);
+    if (ptrs.size === 2) {
+      const a = Array.from(ptrs.values());
+      drag = { mode: 'pinch', d0: Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y), z0: EC.zoom, c0: { x: (a[0].x + a[1].x) / 2, y: (a[0].y + a[1].y) / 2 } };
+    } else if (!drag) drag = { mode: 'maybe', sx: p.x, sy: p.y, ox: p.x, oy: p.y, cam: { x: EC.camx, y: EC.camy }, btn: e.button };
+  });
+  c.addEventListener('pointermove', e => {
+    const p = canvasPos(e); if (ptrs.has(e.pointerId)) ptrs.set(e.pointerId, p);
+    if (!drag) return;
+    if (drag.mode === 'pinch' && ptrs.size === 2) {
+      const a = Array.from(ptrs.values());
+      const d = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y);
+      EC.zoom = clamp(drag.z0 * (d / drag.d0), 0.25, 4); drawEditor(); return;
+    }
+    if (drag.mode === 'maybe') { if (Math.hypot(p.x - drag.sx, p.y - drag.sy) > 7) drag.mode = 'pan'; else return; }
+    if (drag.mode === 'pan') {
+      EC.camx = drag.cam.x - (p.x - drag.sx) / cs();
+      EC.camy = drag.cam.y - (p.y - drag.sy) / cs();
+      drawEditor();
+    }
+  });
+  const up = e => {
+    ptrs.delete(e.pointerId);
+    if (!drag) return;
+    const wasClick = drag.mode === 'maybe';
+    const p = canvasPos(e);
+    if (wasClick && ptrs.size === 0) handleClick(p.x, p.y, drag.btn === 2);
+    drag = null;
+    drawEditor();
+  };
+  c.addEventListener('pointerup', up);
+  c.addEventListener('pointercancel', e => { ptrs.delete(e.pointerId); drag = null; });
+  c.addEventListener('contextmenu', e => { e.preventDefault(); });
+  c.addEventListener('wheel', e => {
+    e.preventDefault();
+    const p = canvasPos(e);
+    const wx = s2wx(p.x), wy = s2wy(p.y);
+    EC.zoom = clamp(EC.zoom * (e.deltaY < 0 ? 1.12 : 1 / 1.12), 0.25, 4);
+    EC.camx = wx - p.x / cs(); EC.camy = wy - p.y / cs();
+    drawEditor();
+  }, { passive: false });
+}
+function handleClick(sx, sy, right) {
+  const L = EC.layer;
+  if (EC.tool === 'wall' && !right) {
+    const w = hitWall(sx, sy);
+    if (w) { toggleWall(L, w.x, w.y, w.d); drawEditor(); renderInspect(); }
+    return;
+  }
+  const ht = hitTest(sx, sy);
+  const n = npcAt(L, ht.x, ht.y);
+  if (right) { // 右键 = 擦除
+    if (ht.t === 'edge') { clearEdge(L, ht.x, ht.y, ht.d); }
+    if (ht.d && hasWall(L, ht.x, ht.y, ht.d)) toggleWall(L, ht.x, ht.y, ht.d);
+    if (n) { S.npcs = S.npcs.filter(q => q.id !== n.id); if (EC.npcSel === n.id) EC.npcSel = null; }
+    delete S.drops[ck(L, ht.x, ht.y)];
+    save(); refresh(); return;
+  }
+  if (EC.rec && EC.npcSel) { // 录制巡逻点
+    const np = npcById(EC.npcSel);
+    if (np && ht.t === 'cell') { np.path.push({ x: ht.x, y: ht.y, layer: L }); save(); refresh(); return; }
+  }
+  switch (EC.tool) {
+    case 'photo':
+      EC.sel = { t: ht.t, x: ht.x, y: ht.y, d: ht.d, l: L };
+      if (ht.t === 'edge') pickImage(src => { setEdge(L, ht.x, ht.y, ht.d, src); drawEditor(); renderInspect(); });
+      renderInspect(); break;
+    case 'portal':
+      if (ht.t === 'edge') { const v = cyclePortal(L, ht.x, ht.y, ht.d); toast(v ? (v === 'up' ? '朝此方向前进 → 上一层' : '朝此方向前进 → 下一层') : '已取消传送'); }
+      else toast('请点击格子的一条边');
+      EC.sel = { t: ht.t, x: ht.x, y: ht.y, d: ht.d, l: L }; renderInspect(); break;
+    case 'npc': {
+      if (n) { n.facing = CW[n.facing]; save(); toast('转向 ' + DN[n.facing]); EC.npcSel = n.id; }
+      else if (EC.npcSel) { const np = npcById(EC.npcSel); if (np) { np.x = ht.x; np.y = ht.y; np.layer = L; save(); toast('已放置：' + np.name); } }
+      else toast('先在左侧选中一个 NPC');
+      EC.sel = { t: ht.t, x: ht.x, y: ht.y, d: ht.d, l: L }; refresh(); break;
+    }
+    case 'start': {
+      if (S.player.x === ht.x && S.player.y === ht.y && S.player.layer === L) S.player.facing = CW[S.player.facing];
+      else { S.player.x = ht.x; S.player.y = ht.y; S.player.layer = L; }
+      save(); refresh(); break;
+    }
+    case 'erase':
+      if (ht.t === 'edge') clearEdge(L, ht.x, ht.y, ht.d);
+      if (ht.d && hasWall(L, ht.x, ht.y, ht.d)) toggleWall(L, ht.x, ht.y, ht.d);
+      if (n) { S.npcs = S.npcs.filter(q => q.id !== n.id); EC.npcSel = null; }
+      delete S.drops[ck(L, ht.x, ht.y)];
+      save(); refresh(); break;
+  }
+  drawEditor();
+}
+
+/* ---------------- 侧栏列表 ---------------- */
+function renderNpcList() {
+  const box = $('#npcList'); clear(box);
+  if (!S.npcs.length) box.appendChild(h('div', { class: 'item', txt: '（暂无 NPC）' }));
+  S.npcs.forEach(n => {
+    box.appendChild(h('div', {
+      class: 'item' + (EC.npcSel === n.id ? ' sel' : ''),
+      onclick: () => { EC.npcSel = n.id; EC.sel = { t: 'cell', x: n.x, y: n.y, l: n.layer }; if (n.layer !== EC.layer) { EC.layer = n.layer; $('#layerInput').value = n.layer; } refresh(); }
+    }, h('span', {}, (n.type === 'chest' ? '[箱] ' : n.type === 'bed' ? '[床] ' : n.type === 'lamp' ? '[灯] ' : '[NPC] ') + n.name),
+      h('span', { class: 'sub', txt: 'L' + n.layer + ' ' + n.x + ',' + n.y })));
+  });
+}
+function renderItemList() {
+  const box = $('#itemList'); clear(box);
+  S.items.forEach(it => {
+    box.appendChild(h('div', {
+      class: 'item' + (EC.itemSel === it.id ? ' sel' : ''),
+      onclick: () => { EC.itemSel = it.id; EC.npcSel = null; renderItemList(); renderInspect(); }
+    }, h('span', {}, it.name),
+      h('span', { class: 'sub', txt: it.kind === 'weapon' ? ('伤害' + it.dmg + ' 距' + it.range) : (it.kind === 'tool' ? '工具' : '普通') })));
+  });
+}
+
+/* ---------------- 检查器 ---------------- */
+function renderInspect() {
+  const box = $('#inspect'); clear(box);
+  if (EC.itemSel) { box.appendChild(itemForm(itemById(EC.itemSel))); return; }
+  if (EC.npcSel) { const n = npcById(EC.npcSel); if (n) { box.appendChild(npcForm(n)); return; } }
+  box.appendChild(cellForm());
+  box.appendChild(worldForm());
+}
+function sec(title, right) {
+  return h('div', { class: 'psec' }, h('div', { class: 'ph' }, title, right || null));
+}
+function imgSlot(src, onPick, cap) {
+  const wrap = h('div', {}, h('div', {
+    class: 'imgslot', onclick: () => pickImage(onPick, 900)
+  }, src ? h('img', { src }) : '＋'), h('div', { class: 'cap', txt: cap }));
+  return wrap;
+}
+function cellForm() {
+  const s = EC.sel || { t: 'cell', x: 0, y: 0, d: 'n', l: EC.layer };
+  const box = sec('格子 (' + s.x + ',' + s.y + ') L' + (s.l !== undefined ? s.l : EC.layer),
+    h('span', { class: 'sub', txt: s.t === 'edge' ? '选中：' + DN[s.d] + '边' : '整格' }));
+  const dd = s.t === 'edge' ? [s.d] : DIRS;
+  const slots = h('div', { class: 'slots' });
+  dd.forEach(d => {
+    const ed = edge(s.l !== undefined ? s.l : EC.layer, s.x, s.y, d);
+    slots.appendChild(imgSlot(ed && ed.img, src => { setEdge(s.l !== undefined ? s.l : EC.layer, s.x, s.y, d, src); refresh(); }, DN[d] + (S.portals[ek((s.l !== undefined ? s.l : EC.layer), s.x, s.y, d)] ? (S.portals[ek((s.l !== undefined ? s.l : EC.layer), s.x, s.y, d)] === 'up' ? '↑' : '↓') : '')));
+  });
+  box.appendChild(slots);
+  const row = h('div', { class: 'row' });
+  dd.forEach(d => {
+    const L = (s.l !== undefined ? s.l : EC.layer);
+    row.appendChild(h('button', { txt: '清' + DN[d], onclick: () => { clearEdge(L, s.x, s.y, d); refresh(); } }));
+  });
+  box.appendChild(row);
+  const np = npcAt((s.l !== undefined ? s.l : EC.layer), s.x, s.y);
+  if (np) box.appendChild(h('div', { class: 'row' }, h('span', { txt: '此格有：' + np.name }), h('button', { txt: '编辑', onclick: () => { EC.npcSel = np.id; refresh(); } })));
+  return box;
+}
+function worldForm() {
+  const box = sec('说明');
+  box.appendChild(h('div', { class: 'hint', html:
+    '<b>玩法</b>：每个格子有独立的 4 张边照片（不共享）。站在格中朝向哪边就显示哪边照片；左右键原地转向，前后键移动一格。<br>' +
+    '<b>楼层</b>：在「🌀 楼层」工具里给某条边设置 ↑/↓，朝那个方向按前进即换层。<br>' +
+    '<b>NPC</b>：四面照片 + 行为（随机游走/追击/远离/巡逻轨道）。进入地图后按透视规则叠加显示。<br>' +
+    '快捷键：<kbd>空格+拖拽</kbd>平移，<kbd>滚轮</kbd>缩放，<kbd>右键</kbd>擦除。' }));
+  return box;
+}
+
+/* ---------------- NPC 表单 ---------------- */
+function npcForm(n) {
+  const box = sec('NPC：' + n.name, h('button', { class: 'danger', txt: '删除', onclick: () => { S.npcs = S.npcs.filter(q => q.id !== n.id); EC.npcSel = null; save(); refresh(); } }));
+  const R = (lab, ...kids) => h('div', { class: 'row' }, h('label', { txt: lab }), ...kids);
+  box.appendChild(R('名称', h('input', { class: 'grow', value: n.name, oninput: e => { n.name = e.target.value; save(); renderNpcList(); } })));
+  box.appendChild(R('类型', h('select', { class: 'grow', onchange: e => { n.type = e.target.value; if (n.type !== 'normal') n.behavior = 'idle'; save(); renderNpcList(); refresh(); } },
+    ['normal', 'chest', 'bed', 'lamp'].map(v => h('option', { value: v, selected: n.type === v, txt: { normal: '普通', chest: '箱子（可存取物品）', bed: '床（可睡觉到早晨）', lamp: '灯（夜里照明）' }[v] })))));
+  box.appendChild(h('div', { class: 'ph', txt: '四面照片' }));
+  const slots = h('div', { class: 'slots' });
+  [['front', '正面'], ['right', '右面'], ['back', '背面'], ['left', '左面']].forEach(([k, cap]) => {
+    slots.appendChild(imgSlot(n.imgs[k], src => { n.imgs[k] = src; save(); refresh(); }, cap));
+  });
+  box.appendChild(slots);
+  box.appendChild(h('div', { class: 'hint', txt: '没有照片时会画一个简易人形代替。' }));
+  box.appendChild(R('行为', h('select', { class: 'grow', onchange: e => { n.behavior = e.target.value; save(); refresh(); } },
+    [['idle', '静止不动'], ['random', '随机游走'], ['chase', '追击用户'], ['flee', '远离用户'], ['patrol', '巡逻轨道']].map(([v, t]) => h('option', { value: v, selected: n.behavior === v, txt: t })))));
+  box.appendChild(R('速度', h('input', { type: 'range', min: '0.2', max: '3', step: '0.1', value: n.speed, oninput: e => { n.speed = +e.target.value; $('#spd' + n.id).textContent = n.speed.toFixed(1) + ' 格/秒'; save(); } }),
+    h('span', { id: 'spd' + n.id, txt: n.speed.toFixed(1) + ' 格/秒' })));
+  if (n.behavior === 'patrol') {
+    box.appendChild(R('轨道', h('button', { class: EC.rec ? 'on' : '', txt: EC.rec ? '录制中…点格子添加' : '录制巡逻点', onclick: () => { EC.rec = !EC.rec; EC.tool = 'npc'; refresh(); } }),
+      h('button', { txt: '清空', onclick: () => { n.path = []; save(); refresh(); } })));
+    box.appendChild(h('div', { class: 'hint', txt: '已录 ' + (n.path ? n.path.length : 0) + ' 个点' + (n.path && n.path.length ? '（第1点：' + n.path[0].x + ',' + n.path[0].y + ' L' + n.path[0].layer + '）' : '') }));
+  }
+  if (n.type === 'normal') {
+    box.appendChild(R('生命', h('input', { type: 'number', min: '1', value: n.hp, oninput: e => { n.hp = +e.target.value || 1; save(); } })));
+    box.appendChild(R('伤害', h('input', { type: 'number', min: '0', value: n.dmg, oninput: e => { n.dmg = +e.target.value || 0; save(); } })));
+    box.appendChild(R('攻击距', h('input', { type: 'number', min: '0.5', step: '0.1', value: n.range, oninput: e => { n.range = +e.target.value || 1; save(); } })));
+    box.appendChild(R('主动攻击', h('input', { type: 'checkbox', checked: !!n.hostile, onchange: e => { n.hostile = e.target.checked; save(); } })));
+    box.appendChild(R('追逐惊吓图', imgSlot(n.jumpscare, src => { n.jumpscare = src; save(); refresh(); }, 'jumpscare')));
+    box.appendChild(R('被抓胜利图', imgSlot(n.victory, src => { n.victory = src; save(); refresh(); }, 'victory')));
+    box.appendChild(h('div', { class: 'hint', txt: '追击型接近到 1 格内触发惊吓图；远离型被追上触发胜利图。' }));
+    box.appendChild(dropEditor(n, 'drops', '掉落物品'));
+  }
+  if (n.type === 'chest') box.appendChild(dropEditor(n, 'chest', '箱内物品'));
+  box.appendChild(R('位置', h('span', { txt: 'L' + n.layer + ' (' + n.x + ',' + n.y + ')' }),
+    h('button', { txt: '转向', onclick: () => { n.facing = CW[n.facing]; save(); drawEditor(); } }),
+    h('button', { txt: '复制', onclick: () => { const c = defNpc(JSON.parse(JSON.stringify(n))); c.id = uid(); c.name = n.name + '副本'; c.x = n.x + 1; S.npcs.push(c); EC.npcSel = c.id; save(); refresh(); } }),
+    h('button', { txt: '定位', onclick: () => { EC.layer = n.layer; $('#layerInput').value = n.layer; EC.camx = n.x - 4; EC.camy = n.y - 3; refresh(); } })));
+  return box;
+}
+function dropEditor(n, field, title) {
+  const box = h('div', { class: 'field' });
+  box.appendChild(h('div', { class: 'ph' }, title,
+    h('button', { txt: '+添加', onclick: () => {
+      openModal('添加' + title, m => {
+        const sel = { id: (S.items[0] || {}).id, count: 1 };
+        m.body.appendChild(h('div', { class: 'row' }, h('label', { txt: '物品' }),
+          h('select', { class: 'grow', onchange: e => sel.id = e.target.value }, S.items.map(i => h('option', { value: i.id, txt: i.name })))));
+        m.body.appendChild(h('div', { class: 'row' }, h('label', { txt: '数量' }), h('input', { type: 'number', min: '1', value: 1, oninput: e => sel.count = +e.target.value || 1 })));
+        m.foot.appendChild(h('button', { txt: '取消', onclick: m.close }));
+        m.foot.appendChild(h('button', { class: 'primary', txt: '添加', onclick: () => { n[field].push({ id: sel.id, count: sel.count }); save(); m.close(); refresh(); } }));
+      });
+    } })));
+  const list = n[field] || [];
+  if (!list.length) box.appendChild(h('div', { class: 'hint', txt: '（空）' }));
+  list.forEach((d, i) => {
+    const it = itemById(d.id);
+    box.appendChild(h('div', { class: 'row' },
+      h('span', { txt: (it ? (it.glyph + ' ' + it.name) : '?') + ' ×' + d.count }),
+      h('button', { txt: '删除', onclick: () => { n[field].splice(i, 1); save(); refresh(); } })));
+  });
+  return box;
+}
+
+/* ---------------- 物品表单 ---------------- */
+function itemForm(it) {
+  const box = sec('物品：' + it.name, h('button', { class: 'danger', txt: '删除', onclick: () => { S.items = S.items.filter(q => q.id !== it.id); EC.itemSel = null; save(); refresh(); } }));
+  const R = (lab, ...kids) => h('div', { class: 'row' }, h('label', { txt: lab }), ...kids);
+  box.appendChild(R('名称', h('input', { class: 'grow', value: it.name, oninput: e => { it.name = e.target.value; save(); renderItemList(); } })));
+  box.appendChild(R('图标', imgSlot(it.icon, src => { it.icon = src; save(); refresh(); }, '上传'),
+    h('input', { style: 'width:56px', value: it.glyph, oninput: e => { it.glyph = e.target.value; save(); renderItemList(); } })));
+  box.appendChild(R('类型', h('select', { class: 'grow', onchange: e => { it.kind = e.target.value; save(); refresh(); renderItemList(); } },
+    ['normal', 'weapon', 'tool'].map(v => h('option', { value: v, selected: it.kind === v, txt: { normal: '普通', weapon: '武器', tool: '工具' }[v] })))));
+  if (it.kind === 'weapon') {
+    box.appendChild(R('伤害', h('input', { type: 'number', min: '0', value: it.dmg, oninput: e => { it.dmg = +e.target.value || 0; save(); } })));
+    box.appendChild(R('距离', h('input', { type: 'number', min: '0.5', step: '0.1', value: it.range, oninput: e => { it.range = +e.target.value || 1; save(); } }), h('span', { txt: '格' })));
+    box.appendChild(R('冷却', h('input', { type: 'number', min: '0.1', step: '0.1', value: it.cd, oninput: e => { it.cd = +e.target.value || 0.2; save(); } }), h('span', { txt: '秒' })));
+  }
+  if (it.kind === 'tool') {
+    box.appendChild(R('功能', h('select', { class: 'grow', onchange: e => { it.tool = e.target.value; save(); refresh(); } },
+      [['', '无'], ['flashlight', '手电筒'], ['heal', '恢复体力'], ['battery', '电池']].map(([v, t]) => h('option', { value: v, selected: it.tool === v, txt: t })))));
+    box.appendChild(R('数值', h('input', { type: 'number', value: it.power, oninput: e => { it.power = +e.target.value || 0; save(); } })));
+  }
+  box.appendChild(R('说明', h('input', { class: 'grow', value: it.desc || '', oninput: e => { it.desc = e.target.value; save(); } })));
+  return box;
+}
+
+function refresh() { renderNpcList(); renderItemList(); renderInspect(); drawEditor(); }
+/* ============================================================
+   P3 游玩引擎
+   ============================================================ */
+const P = {
+  x: 0, y: 0, layer: 0, facing: 'n', hp: 100, maxhp: 100, time: 9,
+  inv: [], equip: null, torch: false, battery: 100,
+  t: 0, lastAtk: -99, lastHurt: -99, atkAnim: 0,
+  fade: 0, prev: null, shake: 0, dead: false, showMap: true, shockCd: 0
+};
+const RT = new Map();   // NPC 运行时状态（不写入存档）
+function rt(n) {
+  let r = RT.get(n.id);
+  if (!r) { r = { x: n.x, y: n.y, layer: n.layer, mv: null, wait: 0, cool: 0, hp: n.hp, dead: false, bfs: null, bfsT: 0 }; RT.set(n.id, r); }
+  return r;
+}
+let view = 'edit';
+let playing = false;
+let maskCv = null;
+function maskCanvas(W, H) {
+  if (!maskCv) maskCv = document.createElement('canvas');
+  if (maskCv.width !== W || maskCv.height !== H) { maskCv.width = W; maskCv.height = H; }
+  return maskCv;
+}
+
+/* ---------------- 进入 / 退出 ---------------- */
+function enterPlay() {
+  RT.clear();
+  S.npcs.forEach(n => { const r = rt(n); r.hp = n.hp; });
+  P.x = S.player.x; P.y = S.player.y; P.layer = S.player.layer; P.facing = S.player.facing;
+  P.maxhp = S.settings.playerHp || 100; P.hp = P.maxhp;
+  P.time = S.settings.startHour || 9;
+  P.t = 0; P.dead = false; P.torch = false; P.battery = 100; P.fade = 0; P.prev = null; P.lastAtk = -99;
+  P.inv = [];
+  const fist = S.items.find(i => i.name === '拳头') || S.items[0];
+  if (fist) { P.inv.push({ id: fist.id, count: 1 }); P.equip = fist.id; }
+  const fl = S.items.find(i => i.tool === 'flashlight');
+  if (fl) P.inv.push({ id: fl.id, count: 1 });
+  view = 'play'; playing = true;
+  $('#app').classList.add('playing');
+  $('#viewEdit').classList.add('hidden'); $('#viewPlay').classList.remove('hidden');
+  $('#tabPlay').classList.add('on'); $('#tabEdit').classList.remove('on');
+  if (Net.on) netStart();
+  updateInteract();
+  sizePlay();
+}
+function exitPlay() {
+  playing = false; view = 'edit';
+  $('#app').classList.remove('playing');
+  $('#viewPlay').classList.add('hidden'); $('#viewEdit').classList.remove('hidden');
+  $('#tabEdit').classList.add('on'); $('#tabPlay').classList.remove('on');
+  netStop(); refresh();
+}
+function sizePlay() {
+  const c = $('#playCanvas'), dpr = Math.min(2, window.devicePixelRatio || 1);
+  const W = c.clientWidth, H = c.clientHeight;
+  if (c.width !== Math.round(W * dpr)) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
+}
+
+/* ---------------- 玩家动作 ---------------- */
+function afterMove() { netSend(true); updateInteract(); }
+function doTurn(which) {
+  if (P.dead) return;
+  P.prev = { l: P.layer, x: P.x, y: P.y, d: P.facing };
+  P.facing = which === 'left' ? CCW[P.facing] : CW[P.facing];
+  P.fade = 1; P.shake = 0.05; afterMove();
+}
+function doMove(sign) {
+  if (P.dead) return;
+  const d = sign > 0 ? P.facing : OPP[P.facing];
+  P.prev = { l: P.layer, x: P.x, y: P.y, d: P.facing };
+  const pt = S.portals[ek(P.layer, P.x, P.y, d)];
+  if (pt) {
+    P.layer += pt === 'up' ? 1 : -1;
+    P.fade = 1; P.shake = 0.12;
+    toast(pt === 'up' ? '↑ 上了一层（L' + P.layer + '）' : '↓ 下了一层（L' + P.layer + '）');
+    afterMove(); return;
+  }
+  if (hasWall(P.layer, P.x, P.y, d)) { toast('前面是墙，走不过去'); P.shake = 0.16; return; }
+  P.x += DV[d].x; P.y += DV[d].y;
+  P.fade = 1; P.shake = 0.07; afterMove();
+}
+function hurt(dmg, src) {
+  if (P.dead) return;
+  if (P.t - P.lastHurt < 0.6) return;
+  P.lastHurt = P.t;
+  P.hp -= dmg; P.shake = 0.3;
+  const f = $('#hitFlash'); f.style.opacity = 1; setTimeout(() => f.style.opacity = 0, 140);
+  if (P.hp <= 0) { P.hp = 0; die(src); }
+}
+
+/* ---------------- NPC 行为 ---------------- */
+function npcPassable(l, x, y, d) { return !hasWall(l, x, y, d); }
+function bfsDir(n, r, tx, ty, tl) {
+  const now = P.t;
+  if (r.bfs && now - r.bfsT < 0.3) return r.bfs;
+  const start = n.layer + '|' + n.x + '|' + n.y, goal = tl + '|' + tx + '|' + ty;
+  r.bfsT = now;
+  if (start === goal) { r.bfs = null; return null; }
+  const prev = new Map(); prev.set(start, null);
+  const q = [start]; let guard = 0, found = false;
+  while (q.length && guard++ < 3500 && !found) {
+    const cur = q.shift(), p = cur.split('|');
+    const l = +p[0], x = +p[1], y = +p[2];
+    for (const d of DIRS) {
+      if (hasWall(l, x, y, d)) continue;
+      const pt = S.portals[l + '|' + x + '|' + y + '|' + d];
+      const nk = pt ? ((pt === 'up' ? l + 1 : l - 1) + '|' + x + '|' + y) : (l + '|' + (x + DV[d].x) + '|' + (y + DV[d].y));
+      if (prev.has(nk)) continue;
+      prev.set(nk, { from: cur, d });
+      if (nk === goal) { found = true; break; }
+      q.push(nk);
+    }
+  }
+  if (!found) { r.bfs = null; return null; }
+  let cur = goal, step = null;
+  while (prev.get(cur)) { step = prev.get(cur); cur = step.from; }
+  r.bfs = step ? step.d : null;
+  return r.bfs;
+}
+function decideDir(n, r) {
+  if (n.behavior === 'idle' || n.type === 'chest' || n.type === 'bed' || n.type === 'lamp') return null;
+  if (n.behavior === 'chase') {
+    const d = bfsDir(n, r, P.x, P.y, P.layer);
+    if (d) return d;
+  } else if (n.behavior === 'flee') {
+    let best = null, bd = -1;
+    for (const d of DIRS) {
+      if (!npcPassable(n.layer, n.x, n.y, d)) continue;
+      const nx = n.x + DV[d].x, ny = n.y + DV[d].y;
+      const dd = Math.hypot(nx - P.x, ny - P.y) + (n.layer === P.layer ? 0 : 0);
+      if (dd > bd) { bd = dd; best = d; }
+    }
+    return best;
+  } else if (n.behavior === 'patrol') {
+    if (!n.path || !n.path.length) return null;
+    const tgt = n.path[(n.pi || 0) % n.path.length];
+    if (n.x === tgt.x && n.y === tgt.y && n.layer === tgt.layer) { n.pi = ((n.pi || 0) + 1) % n.path.length; return null; }
+    return bfsDir(n, r, tgt.x, tgt.y, tgt.layer);
+  }
+  const opts = DIRS.filter(d => npcPassable(n.layer, n.x, n.y, d));
+  if (!opts.length) return null;
+  if (Math.random() < 0.5 && opts.indexOf(n.facing) >= 0) return n.facing;
+  return opts[(Math.random() * opts.length) | 0];
+}
+function npcStep(n, r, dt) {
+  if (r.mv) {
+    r.mv.t += dt * Math.max(0.05, n.speed);
+    if (r.mv.t >= 1) {
+      r.x = r.mv.tx; r.y = r.mv.ty; r.layer = r.mv.tl;
+      n.x = r.mv.tx; n.y = r.mv.ty; n.layer = r.mv.tl;
+      r.mv = null; r.wait = 0.05 + Math.random() * 0.12;
+    } else {
+      r.x = r.mv.fx + (r.mv.tx - r.mv.fx) * r.mv.t;
+      r.y = r.mv.fy + (r.mv.ty - r.mv.fy) * r.mv.t;
+    }
+    return;
+  }
+  if (r.wait > 0) { r.wait -= dt; return; }
+  const d = decideDir(n, r);
+  if (!d || hasWall(n.layer, n.x, n.y, d)) { r.wait = 0.25; return; }
+  const pt = S.portals[ek(n.layer, n.x, n.y, d)];
+  const tx = pt ? n.x : n.x + DV[d].x, ty = pt ? n.y : n.y + DV[d].y;
+  const tl = pt ? (pt === 'up' ? n.layer + 1 : n.layer - 1) : n.layer;
+  n.facing = d;
+  r.mv = { fx: n.x, fy: n.y, tx, ty, tl, t: 0 };
+}
+
+/* ---------------- 视线 ---------------- */
+function losClear(l, x0, y0, x1, y1) {
+  let cx = Math.floor(x0), cy = Math.floor(y0);
+  const tx = Math.floor(x1), ty = Math.floor(y1);
+  if (cx === tx && cy === ty) return true;
+  const dx = x1 - x0, dy = y1 - y0;
+  const sx = dx > 0 ? 1 : dx < 0 ? -1 : 0, sy = dy > 0 ? 1 : dy < 0 ? -1 : 0;
+  const adx = Math.abs(dx), ady = Math.abs(dy);
+  let tmx = sx !== 0 ? ((sx > 0 ? (cx + 1 - x0) : (x0 - cx)) / adx) : Infinity;
+  let tmy = sy !== 0 ? ((sy > 0 ? (cy + 1 - y0) : (y0 - cy)) / ady) : Infinity;
+  const tdx = sx !== 0 ? 1 / adx : Infinity, tdy = sy !== 0 ? 1 / ady : Infinity;
+  let g = 0;
+  while (g++ < 500) {
+    if (cx === tx && cy === ty) return true;
+    if (tmx < tmy) { if (hasWall(l, cx, cy, sx > 0 ? 'e' : 'w')) return false; cx += sx; tmx += tdx; }
+    else { if (hasWall(l, cx, cy, sy > 0 ? 's' : 'n')) return false; cy += sy; tmy += tdy; }
+  }
+  return true;
+}
+
+/* ---------------- 战斗 ---------------- */
+function doAttack() {
+  if (P.dead) return;
+  const w = itemById(P.equip);
+  if (!w || w.kind !== 'weapon') { toast('没有装备武器'); return; }
+  if (P.t - P.lastAtk < w.cd) { toast('武器还在冷却'); return; }
+  P.lastAtk = P.t; P.atkAnim = 0.28; P.shake = 0.06;
+  const targets = [];
+  for (const n of S.npcs) {
+    if (n.type !== 'normal') continue;
+    const r = rt(n); if (r.dead || r.layer !== P.layer) continue;
+    const d = Math.hypot(r.x - P.x, r.y - P.y);
+    if (d > w.range + 0.02) continue;
+    if (d > 0.02 && !losClear(P.layer, P.x + .5, P.y + .5, r.x + .5, r.y + .5)) continue;
+    targets.push({ n, r, d });
+  }
+  targets.sort((a, b) => a.d - b.d);
+  if (!targets.length) { toast('挥空了'); return; }
+  const t = targets[0];
+  t.r.hp -= w.dmg;
+  P.shake = 0.22;
+  if (t.r.hp <= 0) killNpc(t.n, t.r);
+  else toast('击中 ' + t.n.name + '（-「' + w.dmg + '」）');
+}
+function killNpc(n, r) {
+  r.dead = true;
+  const k = ck(r.layer, Math.round(r.x), Math.round(r.y));
+  if (n.drops && n.drops.length) {
+    if (!S.drops[k]) S.drops[k] = [];
+    n.drops.forEach(d => {
+      const ex = S.drops[k].find(q => q.id === d.id);
+      if (ex) ex.count += d.count; else S.drops[k].push({ id: d.id, count: d.count });
+    });
+    toast(n.name + ' 倒下了，留下了东西');
+  } else toast(n.name + ' 倒下了');
+  save();
+}
+
+/* ---------------- 交互 / 背包 ---------------- */
+function currentActs() {
+  const list = [];
+  for (const n of S.npcs) {
+    const r = rt(n); if (r.dead || r.layer !== P.layer) continue;
+    if (Math.round(r.x) === P.x && Math.round(r.y) === P.y) {
+      if (n.type === 'chest') list.push({ kind: 'chest', n, label: '打开 ' + n.name });
+      if (n.type === 'bed') list.push({ kind: 'bed', n, label: '睡觉' });
+    }
+  }
+  const k = ck(P.layer, P.x, P.y);
+  if (S.drops[k] && S.drops[k].length) list.push({ kind: 'pickup', label: '拾取物品' });
+  return list;
+}
+function currentInteract() { return currentActs()[0] || null; }
+let curAct = null, curActsAll = [];
+function updateInteract() {
+  curActsAll = currentActs();
+  curAct = curActsAll[0] || null;
+  const bar = $('#hintBar');
+  if (curActsAll.length > 1) { bar.textContent = '有 ' + curActsAll.length + ' 个可交互对象'; bar.classList.remove('hidden'); }
+  else if (curActsAll.length === 1) { bar.textContent = curActsAll[0].label; bar.classList.remove('hidden'); }
+  else bar.classList.add('hidden');
+  const btn = $('#sideBtns [data-act=interact]');
+  if (btn) btn.classList.toggle('warn', curActsAll.length > 0);
+}
+function doInteract() {
+  if (P.dead) return;
+  if (!curActsAll.length) { toast('这里没什么可交互的'); return; }
+  if (curActsAll.length > 1) {
+    openModal('选择交互', m => {
+      curActsAll.forEach(a => m.body.appendChild(h('div', { class: 'row' },
+        h('button', { class: 'grow', txt: a.label, onclick: () => { m.close(); doAct(a); } }))));
+      m.foot.appendChild(h('button', { txt: '取消', onclick: m.close }));
+    });
+    return;
+  }
+  doAct(curActsAll[0]);
+}
+function doAct(a) {
+  if (a.kind === 'chest') openChest(a.n);
+  else if (a.kind === 'bed') doSleep();
+  else doPickup();
+}
+function doSleep() {
+  P.time = 7.2; P.hp = Math.min(P.maxhp, P.hp + P.maxhp * 0.5);
+  toast('睡了一觉，天亮了，体力恢复了一些');
+  P.fade = 1;
+}
+function doPickup() {
+  const k = ck(P.layer, P.x, P.y);
+  const ds = S.drops[k] || [];
+  ds.forEach(d => giveItem(d.id, d.count));
+  delete S.drops[k]; save(); updateInteract();
+  toast('已拾取');
+}
+function giveItem(id, count) {
+  const ex = P.inv.find(q => q.id === id);
+  if (ex) ex.count += count; else P.inv.push({ id, count });
+}
+function takeItem(id, count) {
+  const ex = P.inv.find(q => q.id === id);
+  if (!ex) return 0;
+  const n = Math.min(ex.count, count);
+  ex.count -= n; if (ex.count <= 0) P.inv = P.inv.filter(q => q.id !== id);
+  return n;
+}
+function slotNode(stack, onClick, sel) {
+  const it = itemById(stack.id);
+  return h('div', { class: 'slot' + (sel ? ' sel' : ''), onclick: onClick },
+    h('div', { class: 'ic' }, it && it.icon ? h('img', { src: it.icon }) : (it ? it.glyph : '❓')),
+    h('div', { class: 'nm', txt: it ? it.name : '?' }),
+    h('div', { class: 'qty', txt: '×' + stack.count }));
+}
+function openBag() {
+  openModal('物品栏', m => {
+    m.body.appendChild(h('div', { class: 'hint', txt: '点物品可装备 / 使用 / 丢弃。武器需要装备后才能攻击。' }));
+    const grid = h('div', { class: 'slotGrid' });
+    if (!P.inv.length) grid.appendChild(h('div', { class: 'hint', txt: '空空如也' }));
+    P.inv.forEach(st => grid.appendChild(slotNode(st, () => { m.close(); itemMenu(st); }, P.equip === st.id)));
+    m.body.appendChild(grid);
+    m.body.appendChild(h('div', { class: 'row', style: 'margin-top:8px' },
+      h('span', { txt: '手电：' + (P.torch ? '开' : '关') + '  电量 ' + Math.round(P.battery) + '%' }),
+      h('button', { txt: P.torch ? '关灯' : '开灯', onclick: () => { toggleTorch(); m.close(); openBag(); } })));
+    m.foot.appendChild(h('button', { txt: '关闭', onclick: m.close }));
+  });
+}
+function itemMenu(stack) {
+  const it = itemById(stack.id);
+  openModal(it.name, m => {
+    m.body.appendChild(h('div', { class: 'row' }, it.icon ? h('img', { class: 'mini', src: it.icon }) : h('span', { style: 'font-size:28px', txt: it.glyph }),
+      h('div', {}, h('div', { txt: it.desc || '' }),
+        it.kind === 'weapon' ? h('div', { class: 'sub', style: 'color:#8b97ad;font-size:12px', txt: '伤害 ' + it.dmg + ' · 距离 ' + it.range + ' 格 · 冷却 ' + it.cd + ' 秒' }) : (it.kind === 'tool' ? h('div', { style: 'color:#8b97ad;font-size:12px', txt: '工具：' + ({ flashlight: '手电筒', heal: '恢复体力', battery: '电池' }[it.tool] || '无') + (it.power ? ' · 数值 ' + it.power : '') }) : null))));
+    if (it.kind === 'weapon') m.foot.appendChild(h('button', { class: 'primary', txt: '装备', onclick: () => { P.equip = it.id; toast('已装备 ' + it.name); m.close(); } }));
+    if (it.kind === 'tool') m.foot.appendChild(h('button', { class: 'primary', txt: '使用', onclick: () => { useTool(it); m.close(); } }));
+    m.foot.appendChild(h('button', { class: 'danger', txt: '丢弃', onclick: () => { takeItem(it.id, 1); m.close(); openBag(); } }));
+    m.foot.appendChild(h('button', { txt: '返回', onclick: () => { m.close(); openBag(); } }));
+  });
+}
+function useTool(it) {
+  if (it.tool === 'heal') { P.hp = Math.min(P.maxhp, P.hp + (it.power || 30)); takeItem(it.id, 1); toast('体力恢复了'); }
+  else if (it.tool === 'battery') { P.battery = Math.min(100, P.battery + (it.power || 50)); takeItem(it.id, 1); toast('手电充了电'); }
+  else if (it.tool === 'flashlight') { toggleTorch(); }
+  else toast('这个好像没什么用');
+}
+function toggleTorch() {
+  if (!P.inv.some(q => (itemById(q.id) || {}).tool === 'flashlight')) { toast('没有手电筒'); return; }
+  P.torch = !P.torch;
+  toast(P.torch ? '手电筒打开（耗电）' : '手电筒关闭');
+}
+function openChest(n) {
+  openModal('箱子：' + n.name, m => {
+    const g = h('div', { class: 'grid2' });
+    const left = h('div', { class: 'card' }, h('div', { class: 'ph', txt: '背包' }));
+    const lg = h('div', { class: 'slotGrid' });
+    P.inv.forEach(st => lg.appendChild(slotNode(st, () => {
+      takeItem(st.id, st.count);
+      const ex = n.chest.find(q => q.id === st.id);
+      if (ex) ex.count += st.count; else n.chest.push({ id: st.id, count: st.count });
+      save(); m.close(); openChest(n);
+    })));
+    if (!P.inv.length) lg.appendChild(h('div', { class: 'hint', txt: '（空）' }));
+    left.appendChild(lg);
+    const right = h('div', { class: 'card' }, h('div', { class: 'ph', txt: '箱内' }));
+    const rg = h('div', { class: 'slotGrid' });
+    n.chest.forEach(st => rg.appendChild(slotNode(st, () => {
+      giveItem(st.id, st.count); n.chest = n.chest.filter(q => q !== st); save(); m.close(); openChest(n);
+    })));
+    if (!n.chest.length) rg.appendChild(h('div', { class: 'hint', txt: '（空）' }));
+    right.appendChild(rg);
+    g.appendChild(left); g.appendChild(right); m.body.appendChild(g);
+    m.body.appendChild(h('div', { class: 'hint', txt: '点背包里的物品存入箱子，点箱子里的物品取出。' }));
+    m.foot.appendChild(h('button', { txt: '关闭', onclick: m.close }));
+  });
+}
+
+/* ---------------- 惊吓 / 死亡 ---------------- */
+function showShock(img, title, buttons) {
+  const root = $('#shockRoot');
+  const im = $('#shockImg');
+  im.src = img || ''; im.style.display = img ? 'block' : 'none';
+  root.querySelector('.cap').textContent = title || '';
+  $$('#shockRoot .btns').forEach(e => e.remove());
+  if (buttons && buttons.length) {
+    const b = h('div', { class: 'btns flexwrap', style: 'gap:8px' });
+    buttons.forEach(x => b.appendChild(h('button', { class: x.cls || '', txt: x.t, onclick: () => { hideShock(); x.fn && x.fn(); } })));
+    root.appendChild(b);
+  }
+  root.classList.add('show');
+}
+function hideShock() { $('#shockRoot').classList.remove('show'); }
+function die(src) {
+  P.dead = true;
+  const img = src && src.jumpscare ? src.jumpscare : '';
+  showShock(img, '你 倒 下 了', [
+    { t: '从起点重来', cls: 'primary', fn: () => { P.x = S.player.x; P.y = S.player.y; P.layer = S.player.layer; P.facing = S.player.facing; P.hp = P.maxhp; P.dead = false; P.time = S.settings.startHour; toast('重来一次'); } },
+    { t: '返回编辑', fn: exitPlay }
+  ]);
+}
+
+/* ---------------- 主循环 ---------------- */
+let lastTs = 0;
+function frame(ts) {
+  const dt = Math.min(0.05, (ts - lastTs) / 1000 || 0);
+  lastTs = ts;
+  if (view === 'play' && playing) { update(dt); renderPlay(); }
+  requestAnimationFrame(frame);
+}
+let hudT = 0;
+function update(dt) {
+  P.t += dt;
+  P.time = (P.time + dt * 24 / Math.max(20, S.settings.dayLen || 180)) % 24;
+  if (P.fade > 0) P.fade -= dt / 0.18;
+  if (P.shake > 0) P.shake -= dt;
+  if (P.atkAnim > 0) P.atkAnim -= dt;
+  if (P.shockCd > 0) P.shockCd -= dt;
+  // 手电耗电
+  const dark = darkness();
+  if (P.torch && dark > 0.12) {
+    P.battery -= dt * 1.8;
+    if (P.battery <= 0) { P.battery = 0; P.torch = false; toast('手电没电了'); }
+  }
+  // NPC
+  for (const n of S.npcs) {
+    const r = rt(n);
+    if (r.dead) continue;
+    npcStep(n, r, dt);
+    if (r.layer !== P.layer) continue;
+    const d = Math.hypot(r.x - P.x, r.y - P.y);
+    const see = d < 0.02 || losClear(P.layer, P.x + .5, P.y + .5, r.x + .5, r.y + .5);
+    if (n.type !== 'normal') continue;
+    // 攻击玩家
+    if ((n.hostile || n.behavior === 'chase') && see && d <= (n.range || 1.2)) {
+      r.cool -= dt;
+      if (r.cool <= 0) { r.cool = n.cd || 1.5; hurt(n.dmg || 5, n); }
+    }
+    if (P.dead || P.t < 2.5 || P.shockCd > 0) continue;
+    // 惊吓 / 胜利
+    if (n.behavior === 'chase' && see && d <= 0.8) {
+      showShock(n.jumpscare, '！', [
+        { t: '继续（后退一格）', cls: 'primary', fn: () => { const d2 = OPP[P.facing]; if (!hasWall(P.layer, P.x, P.y, d2)) { P.x += DV[d2].x; P.y += DV[d2].y; } P.fade = 1; } },
+        { t: '重新开始', fn: () => { P.x = S.player.x; P.y = S.player.y; P.layer = S.player.layer; P.facing = S.player.facing; P.hp = P.maxhp; toast('重来一次'); } }
+      ]);
+      P.shockCd = 12;
+    } else if (n.behavior === 'flee' && see && d <= 0.6) {
+      r.dead = true;
+      showShock(n.victory, '抓到 ' + n.name + ' 了！', [{ t: '好', cls: 'primary', fn: () => {} }]);
+      P.shockCd = 6;
+    }
+  }
+  // HUD
+  hudT += dt;
+  if (hudT > 0.2) {
+    hudT = 0;
+    const hour = Math.floor(P.time), min = Math.floor((P.time % 1) * 60);
+    $('#clock').textContent = (dark > 0.5 ? '🌙' : '☀') + ' ' + String(hour).padStart(2, '0') + ':' + String(min).padStart(2, '0') + (P.torch ? ' 🔦' + Math.round(P.battery) + '%' : '');
+    const pct = P.hp / P.maxhp;
+    $('#statusText').textContent = P.dead ? '已倒下' : pct > .75 ? '体力充沛' : pct > .45 ? '有些狼狈' : pct > .2 ? '摇摇欲坠' : '濒死';
+    $('#layerTag').textContent = 'L' + P.layer + '  (' + P.x + ',' + P.y + ')';
+    updateInteract();
+  }
+  netTick(dt);
+}
+function darkness() {
+  const m = S.settings.night;
+  if (m === 'off') return 0;
+  if (m === 'always') return 0.94;
+  const light = clamp(Math.sin((P.time - 6) / 12 * Math.PI), 0, 1);
+  return (1 - light) * 0.94;
+}
+
+/* ---------------- 渲染 ---------------- */
+function hash3(a, b, c, d) {
+  let x = ((a | 0) * 73856093) ^ ((b | 0) * 19349663) ^ ((c | 0) * 83492791) ^ ((d | 0) * 39916801);
+  x = (x ^ (x >>> 13)) >>> 0;
+  return x / 4294967296;
+}
+function drawProcedural(ctx, W, H, l, x, y, d) {
+  const r1 = hash3(l, x, y, d), r2 = hash3(x, y, l, d + 7), r3 = hash3(y, l, x, d + 13);
+  const hue = Math.floor(r1 * 360), horizon = H * 0.55;
+  const g = ctx.createLinearGradient(0, 0, 0, horizon);
+  g.addColorStop(0, 'hsl(' + hue + ',22%,' + (16 + r2 * 10).toFixed(1) + '%)');
+  g.addColorStop(1, 'hsl(' + ((hue + 30) % 360) + ',28%,' + (30 + r3 * 12).toFixed(1) + '%)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, horizon);
+  ctx.fillStyle = 'hsl(' + ((hue + 40) % 360) + ',16%,' + (8 + r2 * 8).toFixed(1) + '%)';
+  ctx.fillRect(0, horizon, W, H - horizon);
+  for (let i = 0; i < 7; i++) {
+    const rr = hash3(x + i, y, d, l + i), bw = W * (0.06 + rr * 0.16), bh = H * (0.08 + hash3(i, y, x, l) * 0.34);
+    ctx.fillStyle = 'hsla(' + hue + ',18%,' + (12 + rr * 18).toFixed(1) + '%,1)';
+    ctx.fillRect(W * rr * 0.92, horizon - bh, bw, bh);
+  }
+  ctx.strokeStyle = 'rgba(255,255,255,.045)'; ctx.lineWidth = 1; ctx.beginPath();
+  for (let i = 1; i < 8; i++) { const yy = horizon + (H - horizon) * Math.pow(i / 8, 2); ctx.moveTo(0, yy); ctx.lineTo(W, yy); }
+  for (let i = -4; i <= 4; i++) { ctx.moveTo(W / 2 + i * W * 0.05, horizon); ctx.lineTo(W / 2 + i * W * 0.55, H); }
+  ctx.stroke();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = 'rgba(255,255,255,.45)';
+  ctx.font = '600 ' + Math.round(H * 0.028 + 12) + 'px sans-serif';
+  ctx.fillText(DN[d] + '   ·   L' + l + ' (' + x + ',' + y + ')', W / 2, H * 0.5);
+  ctx.font = Math.round(H * 0.016 + 9) + 'px sans-serif';
+  ctx.fillText('该方向还没有设置照片', W / 2, H * 0.5 + H * 0.05);
+}
+function drawScene(ctx, W, H) {
+  const cell = S.cells[ck(P.layer, P.x, P.y)];
+  const ed = cell && cell[P.facing];
+  if (ed && ed.img && imgOk(ed.img)) { try { drawCover(ctx, getImg(ed.img), 0, 0, W, H); } catch (e) {} }
+  else drawProcedural(ctx, W, H, P.layer, P.x, P.y, P.facing);
+  if (P.fade > 0 && P.prev) {
+    const pv = P.prev, pc = S.cells[ck(pv.l, pv.x, pv.y)], pe = pc && pc[pv.d];
+    ctx.globalAlpha = clamp(P.fade, 0, 1);
+    if (pe && pe.img && imgOk(pe.img)) { try { drawCover(ctx, getImg(pe.img), 0, 0, W, H); } catch (e) {} }
+    else drawProcedural(ctx, W, H, pv.l, pv.x, pv.y, pv.d);
+    ctx.globalAlpha = 1;
+  }
+}
+function roundRect(ctx, x, y, w, hh, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + hh - r); ctx.quadraticCurveTo(x + w, y + hh, x + w - r, y + hh);
+  ctx.lineTo(x + r, y + hh); ctx.quadraticCurveTo(x, y + hh, x, y + hh - r);
+  ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.closePath();
+}
+function drawFigure(ctx, x, y, w, hh, face, color) {
+  ctx.fillStyle = color;
+  roundRect(ctx, x + w * 0.14, y + hh * 0.36, w * 0.72, hh * 0.64, w * 0.14); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + w / 2, y + hh * 0.22, w * 0.25, 0, 7); ctx.fill();
+  ctx.fillStyle = 'rgba(0,0,0,.6)';
+  const ex = w * 0.055, ey = y + hh * 0.2;
+  if (face === 'front') { ctx.beginPath(); ctx.arc(x + w * 0.40, ey, ex, 0, 7); ctx.arc(x + w * 0.60, ey, ex, 0, 7); ctx.fill(); }
+  else if (face === 'right') { ctx.beginPath(); ctx.arc(x + w * 0.62, ey, ex, 0, 7); ctx.fill(); }
+  else if (face === 'left') { ctx.beginPath(); ctx.arc(x + w * 0.38, ey, ex, 0, 7); ctx.fill(); }
+}
+function actorFace(facing, dx, dy) {
+  if (Math.abs(dx) < 0.001 && Math.abs(dy) < 0.001) return ['back', 'right', 'front', 'left'][(DI(facing) - DI(P.facing) + 4) % 4];
+  const NF = FVEC[facing], NR = RVEC[facing];
+  const fn = -dx * NF[0] - dy * NF[1], rn = -dx * NR[0] - dy * NR[1];
+  const a = Math.atan2(rn, fn) * 180 / Math.PI;
+  return (a >= -45 && a < 45) ? 'front' : (a >= 45 && a < 135) ? 'right' : (a >= 135 || a < -135) ? 'back' : 'left';
+}
+/* 屏幕投影：把世界偏移转成屏幕位置（近大远小） */
+function projectPoint(dx, dy, dist, W, H) {
+  if (dist < 0.02) return { cx: W / 2, height: H * 1.0, bottom: H * 1.08, f: 1, ratio: 0, dist };
+  const F = FVEC[P.facing], R = RVEC[P.facing];
+  const f = dx * F[0] + dy * F[1], rr = dx * R[0] + dy * R[1];
+  if (f <= 0.3) return null;
+  const ratio = rr / f;
+  if (Math.abs(ratio) > 1.9) return null;
+  return { cx: W / 2 + ratio * W * 0.55, height: H * 0.92 / (1 + dist * 0.85), bottom: H * 0.88, f, ratio, dist };
+}
+function collectActors() {
+  const list = [];
+  for (const n of S.npcs) {
+    const r = rt(n); if (r.dead || r.layer !== P.layer) continue;
+    const dx = r.x - P.x, dy = r.y - P.y, dist = Math.hypot(dx, dy);
+    if (dist > 30) continue;
+    if (dist > 0.02 && !losClear(P.layer, P.x + .5, P.y + .5, r.x + .5, r.y + .5)) continue;
+    list.push({ n, r, dx, dy, dist, facing: n.facing, name: n.name, color: n.type === 'chest' ? '#ffb454' : n.type === 'bed' ? '#6aa9ff' : 'hsl(' + (n.hue || 200) + ',45%,62%)', kind: 'npc' });
+  }
+  for (const p of Net.peers.values()) {
+    if (p.layer !== P.layer) continue;
+    const dx = p.x - P.x, dy = p.y - P.y, dist = Math.hypot(dx, dy);
+    if (dist > 30) continue;
+    if (dist > 0.02 && !losClear(P.layer, P.x + .5, P.y + .5, p.x + .5, p.y + .5)) continue;
+    list.push({ r: null, dx, dy, dist, facing: p.f, name: p.name, color: '#6aa9ff', kind: 'peer', imgs: p.imgs });
+  }
+  list.sort((a, b) => b.dist - a.dist);       // 远的先画，近的盖在上面
+  return list;
+}
+function renderPlay() {
+  const c = $('#playCanvas'); const W = c.clientWidth, H = c.clientHeight;
+  if (!W || !H) return;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  if (c.width !== Math.round(W * dpr)) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
+  const ctx = c.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.save();
+  if (P.shake > 0) { const k = P.shake * 60; ctx.translate((Math.random() - .5) * k, (Math.random() - .5) * k); }
+  drawScene(ctx, W, H);
+  // NPC / 其他玩家
+  const actors = collectActors();
+  for (const a of actors) {
+    const pr = projectPoint(a.dx, a.dy, a.dist, W, H);
+    if (!pr) continue;
+    const cx = pr.cx, height = pr.height, bottom = pr.bottom;
+    if (a.kind === 'npc' && a.n.type === 'lamp') {          // 灯：发光的球
+      const gy = bottom - height * 0.72, rad = Math.max(9, height * 0.24);
+      const g = ctx.createRadialGradient(cx, gy, 1, cx, gy, rad);
+      g.addColorStop(0, 'rgba(255,246,205,.95)'); g.addColorStop(0.32, 'rgba(255,214,110,.5)'); g.addColorStop(1, 'rgba(255,200,80,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, gy, rad, 0, 7); ctx.fill();
+      ctx.fillStyle = '#fffbe8'; ctx.beginPath(); ctx.arc(cx, gy, Math.max(2, rad * 0.16), 0, 7); ctx.fill();
+      continue;
+    }
+    const face = actorFace(a.facing, a.dx, a.dy);
+    const src = a.kind === 'npc' ? (a.n.imgs[face] || a.n.imgs.front) : ((a.imgs && a.imgs[face]) || (a.imgs && a.imgs.front) || '');
+    let w = height * 0.55;
+    if (src && imgOk(src)) { const im = getImg(src); w = height * (im.width / im.height); }
+    const x = cx - w / 2, y = bottom - height;
+    ctx.globalAlpha = clamp(1 - a.dist * 0.05, 0.4, 1);
+    if (src && imgOk(src)) { try { ctx.drawImage(getImg(src), x, y, w, height); } catch (e) { drawFigure(ctx, x, y, w, height, face, a.color); } }
+    else drawFigure(ctx, x, y, w, height, face, a.color);
+    ctx.globalAlpha = 1;
+    if (a.name && (a.kind === 'peer' || a.dist < 6)) {
+      ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.font = Math.round(clamp(height * 0.08, 10, 16)) + 'px sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+      const tw = ctx.measureText(a.name).width;
+      ctx.fillRect(cx - tw / 2 - 4, y - 20, tw + 8, 18);
+      ctx.fillStyle = '#dfe6f2'; ctx.fillText(a.name, cx, y - 4);
+    }
+  }
+  ctx.restore();
+  drawDarkness(ctx, W, H);
+  drawWeapon(ctx, W, H);
+  drawMinimap();
+}
+function drawDarkness(ctx, W, H) {
+  const dark = darkness();
+  if (dark > 0.02) {
+    const m = maskCanvas(Math.round(W), Math.round(H)), mc = m.getContext('2d');
+    mc.setTransform(1, 0, 0, 1, 0, 0); mc.clearRect(0, 0, m.width, m.height);
+    mc.fillStyle = 'rgba(3,6,18,' + dark.toFixed(3) + ')'; mc.fillRect(0, 0, m.width, m.height);
+    if (P.torch && P.battery > 0) {
+      mc.globalCompositeOperation = 'destination-out';
+      const R = Math.max(m.width, m.height) * 0.52;
+      const g = mc.createRadialGradient(m.width / 2, m.height * 0.62, 8, m.width / 2, m.height * 0.62, R);
+      g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(0.4, 'rgba(0,0,0,.9)'); g.addColorStop(0.75, 'rgba(0,0,0,.35)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+      mc.fillStyle = g; mc.fillRect(0, 0, m.width, m.height);
+      mc.globalCompositeOperation = 'source-over';
+    }
+    // 灯 NPC 的光斑
+    for (const n of S.npcs) {
+      if (n.type !== 'lamp') continue;
+      const r = rt(n); if (r.dead || r.layer !== P.layer) continue;
+      const dx = r.x - P.x, dy = r.y - P.y, dist = Math.hypot(dx, dy);
+      if (dist > 9) continue;
+      const pr = projectPoint(dx, dy, dist, W, H); if (!pr) continue;
+      const gy = pr.bottom - pr.height * 0.72;
+      const rad = Math.max(24, H * 0.60 / (1 + dist * 0.8));
+      const g = mc.createRadialGradient(pr.cx, gy, 4, pr.cx, gy, rad);
+      g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(0.4, 'rgba(0,0,0,.6)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+      mc.globalCompositeOperation = 'destination-out';
+      mc.fillStyle = g; mc.fillRect(0, 0, m.width, m.height);
+      mc.globalCompositeOperation = 'source-over';
+    }
+    ctx.drawImage(m, 0, 0, W, H);
+  }
+  // 黄昏/黎明色调
+  if (P.time > 5 && P.time < 7.5) { ctx.fillStyle = 'rgba(255,140,60,.09)'; ctx.fillRect(0, 0, W, H); }
+  else if (P.time > 17 && P.time < 19.5) { ctx.fillStyle = 'rgba(255,90,60,.09)'; ctx.fillRect(0, 0, W, H); }
+  // 濒死红晕
+  const pct = P.hp / P.maxhp;
+  if (pct < 0.35) {
+    const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.2, W / 2, H / 2, Math.max(W, H) * 0.7);
+    g.addColorStop(0, 'rgba(255,0,0,0)'); g.addColorStop(1, 'rgba(180,0,0,' + (0.35 - pct * 0.8).toFixed(2) + ')');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  }
+}
+function drawWeapon(ctx, W, H) {
+  const w = itemById(P.equip);
+  if (!w) return;
+  const t = P.atkAnim > 0 ? (1 - P.atkAnim / 0.28) : 0;
+  const size = Math.min(W, H) * 0.3;
+  const narrow = W < 520;
+  ctx.save();
+  ctx.translate(narrow ? W * 0.72 : W * 0.82, (narrow ? H - 118 : H * 0.98) - size * 0.18);
+  ctx.rotate(-0.5 + Math.sin(t * Math.PI) * 1.6);
+  ctx.globalAlpha = 0.95;
+  if (w.icon && imgOk(w.icon)) { const im = getImg(w.icon); const hh = size * (im.height / im.width); ctx.drawImage(im, -size / 2, -hh / 2, size, hh); }
+  else {
+    // 不依赖 emoji 字体：手绘一个粗糙武器轮廓
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#b9c4d4'; ctx.lineWidth = size * 0.11;
+    ctx.beginPath(); ctx.moveTo(-size * 0.2, size * 0.32); ctx.lineTo(size * 0.2, -size * 0.3); ctx.stroke();
+    ctx.strokeStyle = '#8a6a3a'; ctx.lineWidth = size * 0.1;
+    ctx.beginPath(); ctx.moveTo(-size * 0.22, size * 0.34); ctx.lineTo(-size * 0.34, size * 0.44); ctx.stroke();
+    ctx.fillStyle = 'rgba(0,0,0,.35)';
+    ctx.beginPath(); ctx.arc(size * 0.2, -size * 0.3, size * 0.07, 0, 7); ctx.fill();
+  }
+  ctx.restore();
+}
+function drawMinimap() {
+  const c = $('#minimap');
+  if (!P.showMap) { c.style.display = 'none'; return; }
+  c.style.display = 'block';
+  const ctx = c.getContext('2d'), W = c.width, H = c.height;
+  ctx.clearRect(0, 0, W, H);
+  const R = 5, s = W / (R * 2 + 1);
+  for (let j = -R; j <= R; j++) for (let i = -R; i <= R; i++) {
+    const px = (i + R) * s, py = (j + R) * s;
+    ctx.fillStyle = cellHasContent(P.layer, P.x + i, P.y + j) ? 'rgba(110,150,220,.26)' : 'rgba(255,255,255,.045)';
+    ctx.fillRect(px, py, s - 1, s - 1);
+  }
+  ctx.strokeStyle = '#ff6b6b'; ctx.lineWidth = 2; ctx.beginPath();
+  for (let j = -R; j <= R; j++) for (let i = -R; i <= R; i++) {
+    const x = P.x + i, y = P.y + j, px = (i + R) * s, py = (j + R) * s;
+    if (hasWall(P.layer, x, y, 'e')) { ctx.moveTo(px + s, py); ctx.lineTo(px + s, py + s); }
+    if (hasWall(P.layer, x, y, 's')) { ctx.moveTo(px, py + s); ctx.lineTo(px + s, py + s); }
+  }
+  ctx.stroke();
+  ctx.fillStyle = '#6aa9ff';
+  for (let j = -R; j <= R; j++) for (let i = -R; i <= R; i++) {
+    if (S.portals[ek(P.layer, P.x + i, P.y + j, P.facing)]) {
+      ctx.beginPath(); ctx.arc((i + R) * s + s / 2, (j + R) * s + s / 2, s * 0.16, 0, 7); ctx.fill();
+    }
+  }
+  for (const n of S.npcs) {
+    const r = rt(n); if (r.dead || r.layer !== P.layer) continue;
+    const i = Math.round(r.x) - P.x, j = Math.round(r.y) - P.y;
+    if (Math.abs(i) > R || Math.abs(j) > R) continue;
+    ctx.fillStyle = n.type === 'chest' ? '#ffb454' : n.behavior === 'chase' ? '#ff6b6b' : '#9be89b';
+    ctx.beginPath(); ctx.arc((i + R) * s + s / 2, (j + R) * s + s / 2, s * 0.22, 0, 7); ctx.fill();
+  }
+  for (const p of Net.peers.values()) {
+    if (p.layer !== P.layer) continue;
+    const i = p.x - P.x, j = p.y - P.y;
+    if (Math.abs(i) > R || Math.abs(j) > R) continue;
+    ctx.fillStyle = '#6aa9ff';
+    ctx.beginPath(); ctx.arc((i + R) * s + s / 2, (j + R) * s + s / 2, s * 0.2, 0, 7); ctx.fill();
+  }
+  const k = ck(P.layer, P.x, P.y);
+  if (S.drops[k] && S.drops[k].length) { ctx.fillStyle = '#ffb454'; ctx.fillRect((R) * s + s * 0.7, (R) * s + s * 0.7, s * 0.25, s * 0.25); }
+  drawArrow(ctx, R * s + s / 2, R * s + s / 2, s * 0.42, P.facing, '#7ee787', true);
+}
+
+/* ---------------- 输入 ---------------- */
+function playAct(a) {
+  switch (a) {
+    case 'fwd': doMove(1); break;
+    case 'back': doMove(-1); break;
+    case 'left': doTurn('left'); break;
+    case 'right': doTurn('right'); break;
+    case 'attack': doAttack(); break;
+    case 'interact': doInteract(); break;
+    case 'bag': openBag(); break;
+    case 'torch': toggleTorch(); break;
+    case 'map': P.showMap = !P.showMap; break;
+    case 'exit': exitPlay(); break;
+  }
+}
+function bindPlayInput() {
+  $('#dpad').addEventListener('click', e => { const b = e.target.closest('button'); if (b) playAct(b.dataset.act); });
+  $('#sideBtns').addEventListener('click', e => { const b = e.target.closest('button'); if (b) playAct(b.dataset.act); });
+  // 手势
+  let tx0 = 0, ty0 = 0, tt0 = 0;
+  const cv = $('#playCanvas');
+  cv.addEventListener('touchstart', e => { const t = e.changedTouches[0]; tx0 = t.clientX; ty0 = t.clientY; tt0 = Date.now(); }, { passive: true });
+  cv.addEventListener('touchend', e => {
+    const t = e.changedTouches[0], dx = t.clientX - tx0, dy = t.clientY - ty0;
+    if (Date.now() - tt0 > 900) return;
+    if (Math.hypot(dx, dy) < 40) { playAct('fwd'); return; }
+    if (Math.abs(dx) > Math.abs(dy)) playAct(dx > 0 ? 'right' : 'left');
+    else playAct(dy > 0 ? 'back' : 'fwd');
+  }, { passive: true });
+}
+function bindKeys() {
+  document.addEventListener('keydown', e => {
+    if ($('#modalRoot').classList.contains('show') || $('#shockRoot').classList.contains('show')) {
+      if (e.key === 'Escape') { closeModal(); hideShock(); }
+      return;
+    }
+    if (view !== 'play') return;
+    const k = e.key.toLowerCase();
+    const map = { w: 'fwd', arrowup: 'fwd', s: 'back', arrowdown: 'back', a: 'left', arrowleft: 'left', d: 'right', arrowright: 'right' };
+    if (map[k]) { e.preventDefault(); playAct(map[k]); return; }
+    if (k === ' ') { e.preventDefault(); playAct('attack'); }
+    else if (k === 'e') playAct('interact');
+    else if (k === 'i' || k === 'b') playAct('bag');
+    else if (k === 'f') playAct('torch');
+    else if (k === 'm') playAct('map');
+    else if (k === 'escape') exitPlay();
+  });
+}
+/* ============================================================
+   P4 轻量联机 / 导入导出 / 各类弹窗
+   ============================================================ */
+const Net = {
+  on: false, room: 'room1', name: '路人' + ((Math.random() * 90 + 10) | 0), id: uid(),
+  bc: null, ws: null, wsUrl: '', peers: new Map(), imgs: { front: '', left: '', right: '', back: '' }, acc: 0, imgAcc: 0
+};
+function netSendRaw(m) {
+  try {
+    if (Net.ws && Net.ws.readyState === 1) Net.ws.send(JSON.stringify(m));
+    else if (Net.bc) Net.bc.postMessage(m);
+  } catch (e) {}
+}
+function netSend() {
+  if (!Net.on || view !== 'play') return;
+  netSendRaw({ t: 's', id: Net.id, name: Net.name, x: P.x, y: P.y, l: P.layer, f: P.facing, ts: Date.now() });
+}
+function netSendImg() {
+  if (!Net.on) return;
+  const v = Net.imgs;
+  if (!v.front && !v.left && !v.right && !v.back) return;
+  netSendRaw({ t: 'i', id: Net.id, imgs: v });
+}
+function netRecv(m) {
+  if (!m || !m.id || m.id === Net.id) return;
+  if (m.t === 'i') {
+    const p = Net.peers.get(m.id);
+    if (p) p.imgs = m.imgs || {};
+    else Net.peers.set(m.id, { name: '?', x: 0, y: 0, layer: 0, f: 'n', imgs: m.imgs || {}, ts: Date.now() });
+    return;
+  }
+  if (m.t !== 's') return;
+  const old = Net.peers.get(m.id);
+  Net.peers.set(m.id, {
+    name: m.name || '?', x: m.x | 0, y: m.y | 0, layer: m.l | 0, f: m.f || 'n',
+    imgs: (old && old.imgs) || {}, ts: Date.now()
+  });
+  if (!old) netSendImg();        // 新来的，把自己的形象发一次
+}
+function netStart() {
+  netStop();
+  try {
+    Net.bc = new BroadcastChannel('walksim-' + Net.room);
+    Net.bc.onmessage = e => netRecv(e.data);
+  } catch (e) { console.warn('BroadcastChannel 不可用', e); }
+  if (Net.wsUrl) {
+    try {
+      Net.ws = new WebSocket(Net.wsUrl);
+      Net.ws.onmessage = e => { try { netRecv(JSON.parse(e.data)); } catch (err) {} };
+      Net.ws.onopen = () => { toast('联机中继已连接：' + Net.wsUrl); netSendImg(); };
+      Net.ws.onerror = () => toast('中继连接失败，仅本机多标签页可用');
+    } catch (e) { toast('中继地址无效'); }
+  }
+  netSendImg();
+  toast(Net.wsUrl ? '联机已开启' : '联机已开启（本机多标签页 / 同一浏览器）');
+}
+function netStop() {
+  try { if (Net.bc) Net.bc.close(); } catch (e) {}
+  try { if (Net.ws) Net.ws.close(); } catch (e) {}
+  Net.bc = null; Net.ws = null; Net.peers.clear();
+}
+function netTick(dt) {
+  if (!Net.on || view !== 'play') return;
+  Net.acc += dt; Net.imgAcc += dt;
+  if (Net.acc > 0.12) { Net.acc = 0; netSend(); }
+  if (Net.imgAcc > 10) { Net.imgAcc = 0; netSendImg(); }
+  const now = Date.now();
+  for (const [k, v] of Array.from(Net.peers)) if (now - v.ts > 9000) Net.peers.delete(k);
+}
+function openNet() {
+  openModal('轻量联机', m => {
+    m.body.appendChild(h('div', { class: 'hint', txt: '开启后，其他玩家会以和 NPC 相同的方式出现在你的画面里（远距离小、近距离大，按朝向显示正/侧/背面）。默认通过 BroadcastChannel 在同一浏览器的多个标签页/窗口间同步；填入 WebSocket 中继地址可跨设备。' }));
+    m.body.appendChild(h('div', { class: 'row' }, h('label', { txt: '开关' }),
+      h('button', { class: Net.on ? 'on' : '', txt: Net.on ? '已开启' : '已关闭', onclick: e => { Net.on = !Net.on; if (Net.on) { if (view === 'play') netStart(); } else netStop(); e.target.className = Net.on ? 'on' : ''; e.target.textContent = Net.on ? '已开启' : '已关闭'; } })));
+    const room = h('input', { class: 'grow', value: Net.room });
+    const name = h('input', { class: 'grow', value: Net.name });
+    const ws = h('input', { class: 'grow', value: Net.wsUrl, placeholder: 'ws://... 留空则仅本机' });
+    m.body.appendChild(h('div', { class: 'row' }, h('label', { txt: '房间' }), room));
+    m.body.appendChild(h('div', { class: 'row' }, h('label', { txt: '昵称' }), name));
+    m.body.appendChild(h('div', { class: 'row' }, h('label', { txt: '中继' }), ws));
+    m.body.appendChild(h('div', { class: 'ph', txt: '我的形象（四面，可只传正面）' }));
+    const slots = h('div', { class: 'slots' });
+    [['front', '正面'], ['right', '右面'], ['back', '背面'], ['left', '左面']].forEach(([k, cap]) => {
+      slots.appendChild(imgSlot(Net.imgs[k], src => { Net.imgs[k] = src; m.close(); openNet(); }, cap));
+    });
+    m.body.appendChild(slots);
+    const cnt = h('div', { class: 'hint' });
+    const tick = () => { cnt.textContent = '当前在线：' + (Net.on ? Net.peers.size + 1 : 0) + ' 人' + (Net.on ? '（' + Net.name + ' + ' + Array.from(Net.peers.values()).map(p => p.name).join('、') + '）' : ''); };
+    tick(); m.body.appendChild(cnt); m.tick = setInterval(tick, 800);
+    m.foot.appendChild(h('button', { txt: '取消', onclick: () => { clearInterval(m.tick); m.close(); } }));
+    m.foot.appendChild(h('button', { class: 'primary', txt: '应用', onclick: () => {
+      Net.room = room.value || 'room1'; Net.name = name.value || '路人'; Net.wsUrl = ws.value.trim();
+      clearInterval(m.tick); m.close();
+      if (Net.on) { if (view === 'play') netStart(); else netStop(); }
+      toast('联机设置已保存');
+    } }));
+  }, { onClose: () => {} });
+}
+
+/* ---------------- 导入导出 ---------------- */
+function download(name, text) {
+  const b = new Blob([text], { type: 'application/json;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(b); a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+function openExport() {
+  openModal('导出', m => {
+    const info = h('div', { class: 'hint' });
+    const upd = () => { info.textContent = '当前工程：格子 ' + Object.keys(S.cells).length + ' · 墙 ' + Object.keys(S.walls).length + ' · 传送 ' + Object.keys(S.portals).length + ' · NPC ' + S.npcs.length + ' · 物品 ' + S.items.length + ' · 约 ' + (JSON.stringify(S).length / 1024).toFixed(0) + ' KB'; };
+    upd(); m.body.appendChild(info);
+    const nm = h('input', { class: 'grow', value: (S.meta.name || 'map') });
+    m.body.appendChild(h('div', { class: 'row' }, h('label', { txt: '文件名' }), nm, h('span', { txt: '.json' })));
+    const dl = (obj, tag) => download((nm.value || 'map') + '-' + tag + '.json', JSON.stringify(obj));
+    m.body.appendChild(h('div', { class: 'row' },
+      h('button', { class: 'primary', txt: '导出全部', onclick: () => { dl(S, 'all'); m.close(); } }),
+      h('button', { txt: '仅地图', onclick: () => { dl({ meta: S.meta, settings: S.settings, player: S.player, cells: S.cells, walls: S.walls, portals: S.portals, drops: S.drops }, 'map'); m.close(); } }),
+      h('button', { txt: '仅 NPC+物品', onclick: () => { dl({ npcs: S.npcs, items: S.items }, 'npc'); m.close(); } })));
+    m.body.appendChild(h('div', { class: 'hint', txt: '图片以 dataURL 形式内嵌在 JSON 里，所以文件可能较大。' }));
+    m.foot.appendChild(h('button', { txt: '关闭', onclick: m.close }));
+  });
+}
+function openImport() {
+  const inp = $('#jsonPicker'); inp.value = '';
+  inp.onchange = () => {
+    const f = inp.files[0]; if (!f) return;
+    const fr = new FileReader();
+    fr.onload = () => {
+      let o; try { o = JSON.parse(fr.result); } catch (e) { toast('不是有效的 JSON'); return; }
+      openModal('导入', m => {
+        m.body.appendChild(h('div', { class: 'hint', txt: '识别到：' + (o.cells ? '地图 ' : '') + (o.npcs ? 'NPC ' : '') + (o.items ? '物品' : '') + '（' + (JSON.stringify(o).length / 1024).toFixed(0) + ' KB）' }));
+        const doMerge = (mode) => {
+          if (mode === 'replace') { S = migrate(o); }
+          else {
+            Object.assign(S.cells, o.cells || {});
+            Object.assign(S.walls, o.walls || {});
+            Object.assign(S.portals, o.portals || {});
+            Object.assign(S.drops, o.drops || {});
+            (o.npcs || []).forEach(n => { const c = JSON.parse(JSON.stringify(n)); if (S.npcs.some(q => q.id === c.id)) c.id = uid(); S.npcs.push(Object.assign(defNpc(), c)); });
+            (o.items || []).forEach(i => { if (!S.items.some(q => q.id === i.id)) S.items.push(Object.assign(defItem(), i)); });
+            if (o.settings) Object.assign(S.settings, o.settings);
+          }
+          save(true); syncInputs(); refresh(); m.close(); toast('导入完成');
+        };
+        m.body.appendChild(h('div', { class: 'row' },
+          h('button', { class: 'danger', txt: '覆盖当前工程', onclick: () => doMerge('replace') }),
+          h('button', { class: 'primary', txt: '合并进当前工程', onclick: () => doMerge('merge') })));
+        m.foot.appendChild(h('button', { txt: '取消', onclick: m.close }));
+      });
+    };
+    fr.readAsText(f);
+  };
+  inp.click();
+}
+function openHelp() {
+  openModal('使用说明', m => {
+    m.body.appendChild(h('div', { class: 'hint', html:
+      '<b>一、做地图</b><br>' +
+      '· 画面上是无限延展的正方点阵，滚轮缩放、拖拽平移、右键擦除。<br>' +
+      '· 选「🖼 照片」工具，点格子里<b>靠内侧的一条边</b>即可给这个方向的视角上传照片。每个点的四条边各自独立，不共享。<br>' +
+      '· 「🧱 墙」工具点格子之间的<b>边界线</b>，可设置无法穿越的墙。<br>' +
+      '· 「🌀 楼层」工具点某条边，循环设置 无 / ↑上一层 / ↓下一层；朝那个方向按前进就换层。<br>' +
+      '· 「👤 NPC」工具：先在左侧列表选中一个 NPC，再点格子放置；点已有 NPC 让它原地转 90°。<br>' +
+      '· 「🚩 起点」工具设置玩家出生格和朝向。<br><br>' +
+      '<b>二、玩</b><br>' +
+      '· 进入后全屏显示当前格、当前朝向那张照片。⟲⟳ 原地转身，↑↓ 前进/后退一格。<br>' +
+      '· 键盘：<kbd>W</kbd><kbd>S</kbd><kbd>A</kbd><kbd>D</kbd>/方向键，<kbd>空格</kbd>攻击，<kbd>E</kbd>交互，<kbd>I</kbd>物品，<kbd>F</kbd>手电，<kbd>M</kbd>小地图，<kbd>Esc</kbd>退出。手机可直接滑动屏幕。<br>' +
+      '· NPC 按透视规则叠加显示：同格最大、越远越小，并按它与你的相对朝向显示正/侧/背面；隔墙不可见。<br>' +
+      '· 追击型 NPC 贴脸会触发 jumpscare；远离型被你追上会显示胜利图。箱子和床站在同格点「交互」。<br>' +
+      '· 右上角小地图；昼夜会自动交替，夜里可开手电（耗电，电池可充）；睡床可跳到早晨并回体力。<br>' +
+      '· 「灯」型 NPC 会自己在夜里发光照明；「箱」能存取物品；「床」能睡觉。<br>' +
+      '· 不显示血条，只用左下角文字与画面红晕提示状态。<br><br>' +
+      '<b>三、其它</b><br>' +
+      '· 进度自动存在浏览器本地；可导出/导入 JSON（地图与 NPC 分开或一起）。<br>' +
+      '· 「联机」开启后，其他玩家像 NPC 一样显示（同浏览器多标签页可直接用，填 WebSocket 中继可跨设备）。' }));
+    m.foot.appendChild(h('button', { txt: '知道了', onclick: m.close }));
+  });
+}
+/* ============================================================
+   P5 初始化 / 事件绑定
+   ============================================================ */
+function syncInputs() {
+  $('#mapName').value = S.meta.name || '';
+  $('#dayLen').value = S.settings.dayLen;
+  $('#startHour').value = S.settings.startHour;
+  $('#nightMode').value = S.settings.night;
+  $('#playerHp').value = S.settings.playerHp;
+  $('#layerInput').value = EC.layer;
+}
+function viewCenterCell() {
+  const c = $('#editCanvas');
+  return { x: Math.round(s2wx(c.clientWidth / 2)), y: Math.round(s2wy(c.clientHeight / 2)) };
+}
+function addNpcOf(type) {
+  const c = viewCenterCell();
+  const base = type === 'chest' ? { name: '木箱', type: 'chest', behavior: 'idle', chest: [] }
+    : type === 'bed' ? { name: '床', type: 'bed', behavior: 'idle' }
+      : type === 'lamp' ? { name: '灯', type: 'lamp', behavior: 'idle' }
+        : { name: '新 NPC', type: 'normal', behavior: 'random', speed: 0.8 };
+  const n = defNpc(Object.assign({ x: c.x, y: c.y, layer: EC.layer }, base));
+  S.npcs.push(n); EC.npcSel = n.id; EC.itemSel = null;
+  save(); refresh();
+}
+function demoContent() {
+  S = defState();
+  S.meta.name = '示例地图';
+  S.player = { x: 0, y: 0, layer: 0, facing: 'n' };
+  S.portals[ek(0, 0, 0, 'n')] = 'up';        // 起点朝北前进 → 上一楼
+  S.walls[wallKey(0, 0, 0, 's')] = true;     // 南边有墙
+  S.walls[wallKey(0, 0, 0, 'w')] = true;
+  const knife = S.items.find(i => i.name === '小刀'), med = S.items.find(i => i.name === '医疗包'), bat = S.items.find(i => i.name === '铁棍');
+  S.npcs.push(defNpc({ name: '幽灵', type: 'normal', behavior: 'chase', x: 0, y: 3, layer: 0, facing: 'n', speed: 0.45, hp: 40, dmg: 8, range: 1.2, cd: 1.6, hostile: true, drops: [{ id: bat.id, count: 1 }] }));
+  S.npcs.push(defNpc({ name: '巡逻者', type: 'normal', behavior: 'patrol', x: 3, y: 0, layer: 0, facing: 'n', speed: 1.1, hp: 60, path: [{ x: 3, y: 0, layer: 0 }, { x: 3, y: 3, layer: 0 }, { x: 6, y: 3, layer: 0 }, { x: 6, y: 0, layer: 0 }] }));
+  S.npcs.push(defNpc({ name: '胆小鬼', type: 'normal', behavior: 'flee', x: -3, y: 1, layer: 0, facing: 'e', speed: 1.3, hp: 20 }));
+  S.npcs.push(defNpc({ name: '木箱', type: 'chest', x: 1, y: 0, layer: 0, facing: 'n', chest: [{ id: knife.id, count: 1 }, { id: med.id, count: 2 }] }));
+  S.npcs.push(defNpc({ name: '床', type: 'bed', x: -1, y: 0, layer: 0, facing: 'n' }));
+  S.npcs.push(defNpc({ name: '路灯', type: 'lamp', x: 2, y: 0, layer: 0, facing: 'n' }));
+  save();
+}
+function bindUI() {
+  // 顶部
+  $('#tabEdit').onclick = () => exitPlay();
+  $('#tabPlay').onclick = () => enterPlay();
+  $('#btnSave').onclick = () => save(true);
+  $('#btnExport').onclick = openExport;
+  $('#btnImport').onclick = openImport;
+  $('#btnNet').onclick = openNet;
+  $('#btnHelp').onclick = openHelp;
+  // 工具
+  $$('#viewEdit .tool').forEach(b => b.onclick = () => {
+    EC.tool = b.dataset.tool;
+    $$('#viewEdit .tool').forEach(q => q.classList.toggle('on', q === b));
+    $('#toolHint').textContent = TOOLHINT[EC.tool] || '';
+  });
+  $('#toolHint').textContent = TOOLHINT.photo;
+  // 层
+  const setLayer = v => { EC.layer = v | 0; $('#layerInput').value = EC.layer; refresh(); };
+  $('#layerDown').onclick = () => setLayer(EC.layer - 1);
+  $('#layerUp').onclick = () => setLayer(EC.layer + 1);
+  $('#layerInput').onchange = e => setLayer(+e.target.value || 0);
+  // 列表
+  $('#addNpc').onclick = () => addNpcOf('normal');
+  $('#addChest').onclick = () => addNpcOf('chest');
+  $('#addBed').onclick = () => addNpcOf('bed');
+  $('#addLamp').onclick = () => addNpcOf('lamp');
+  $('#addItem').onclick = () => {
+    const it = defItem({ name: '新物品' });
+    S.items.push(it); EC.itemSel = it.id; EC.npcSel = null; save(); refresh();
+  };
+  // 世界设置
+  $('#mapName').oninput = e => { S.meta.name = e.target.value; save(); };
+  $('#dayLen').oninput = e => { S.settings.dayLen = +e.target.value || 180; save(); };
+  $('#startHour').oninput = e => { S.settings.startHour = clamp(+e.target.value || 0, 0, 23); save(); };
+  $('#nightMode').onchange = e => { S.settings.night = e.target.value; save(); };
+  $('#playerHp').oninput = e => { S.settings.playerHp = +e.target.value || 100; save(); };
+  $('#clearLayer').onclick = () => confirmBox('清空本层', '将删除 L' + EC.layer + ' 的所有照片、墙、传送与 NPC，确定？', () => {
+    const L = EC.layer + '|';
+    Object.keys(S.cells).forEach(k => { if (k.indexOf(L) === 0) delete S.cells[k]; });
+    Object.keys(S.walls).forEach(k => { if (k.indexOf(L) === 0) delete S.walls[k]; });
+    Object.keys(S.portals).forEach(k => { if (k.indexOf(L) === 0) delete S.portals[k]; });
+    Object.keys(S.drops).forEach(k => { if (k.indexOf(L) === 0) delete S.drops[k]; });
+    S.npcs = S.npcs.filter(n => n.layer !== EC.layer);
+    EC.npcSel = null; save(); refresh(); toast('已清空 L' + EC.layer);
+  });
+  $('#clearAll').onclick = () => confirmBox('清空全部', '整个工程都会被清空，确定？', () => { S = defState(); save(); syncInputs(); refresh(); });
+  $('#toPlay').onclick = () => enterPlay();
+  // 尺寸
+  if (window.ResizeObserver) {
+    new ResizeObserver(() => { if (view === 'edit') drawEditor(); }).observe($('#editStage'));
+  }
+  window.addEventListener('resize', () => { sizePlay(); if (view === 'edit') drawEditor(); });
+  window.addEventListener('orientationchange', () => setTimeout(() => { sizePlay(); drawEditor(); }, 300));
+  window.addEventListener('beforeunload', () => { try { localStorage.setItem(LSKEY, JSON.stringify(S)); } catch (e) {} });
+  document.addEventListener('keydown', e => {
+    if (view !== 'play' && (e.key === ' ')) { /* 编辑态空格+拖拽平移 */ }
+  });
+}
+
+/* ---------------- 启动 ---------------- */
+(function init() {
+  if (!loadStore()) { demoContent(); }
+  syncInputs();
+  bindUI();
+  bindEditorCanvas();
+  bindPlayInput();
+  bindKeys();
+  // 把视野放到有内容的地方
+  EC.camx = S.player.x - 5.5; EC.camy = S.player.y - 4.5;
+  refresh();
+  drawEditor();
+  requestAnimationFrame(ts => { lastTs = ts; requestAnimationFrame(frame); });
+  if (!localStorage.getItem('walksim.seen')) {
+    localStorage.setItem('walksim.seen', '1');
+    setTimeout(openHelp, 400);
+  }
+})();
+</script>
+
+
+<div id="aix-action-loading-host"></div><script src="chrome-extension://pljfekbkmmbkdfhddpebdlmfngigcohc/content/windowDataMessage.js"></script><div id="aix-drop-panel">
+    <a id="aix-drop-panel-close-btn">×</a>
+        <div id="aix-drop-panel-inner">
+            <div class="aix-content">
+                <svg class="aix-icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="5892"><path d="M494.933333 782.933333c2.133333 2.133333 4.266667 4.266667 8.533334 6.4h8.533333c6.4 0 10.666667-2.133333 14.933333-6.4l2.133334-2.133333 275.2-275.2c8.533333-8.533333 8.533333-21.333333 0-29.866667-8.533333-8.533333-21.333333-8.533333-29.866667 0L533.333333 716.8V128c0-12.8-8.533333-21.333333-21.333333-21.333333s-21.333333 8.533333-21.333333 21.333333v588.8L249.6 475.733333c-8.533333-8.533333-21.333333-8.533333-29.866667 0-8.533333 8.533333-8.533333 21.333333 0 29.866667l275.2 277.333333zM853.333333 874.666667H172.8c-12.8 0-21.333333 8.533333-21.333333 21.333333s8.533333 21.333333 21.333333 21.333333H853.333333c12.8 0 21.333333-8.533333 21.333334-21.333333s-10.666667-21.333333-21.333334-21.333333z" p-id="5893"></path></svg>
+                <div class="aix-title">拖拽到此处完成下载</div>
+                <div class="aix-desc">图片将完成下载</div>
+            </div>
+            <div id="aix-supported-by">AIX智能下载器</div>
+        </div>
+    </div></body><div id="__caoliao-browser-ext" data-context="{}"></div><div id="immersive-translate-popup" style="all: initial"></div></html>
