@@ -99,6 +99,8 @@ details.fold[open]>summary{margin-bottom:6px}
 .tag{background:rgba(10,14,20,.66);border:1px solid #2c3446;border-radius:8px;padding:3px 10px;font-size:13px;
   backdrop-filter:blur(3px)}
 .tag.warn{color:var(--acc2);border-color:#5a4520}
+.tag.task{color:#ffe9c2;border-color:#5a4520;max-width:min(320px,62vw);white-space:normal;line-height:1.4;border-left:3px solid var(--acc2)}
+.tag.task.off{display:none}
 #minimapWrap{position:absolute;right:10px;top:10px;text-align:center}
 #minimap{background:rgba(8,11,16,.74);border:1px solid #34405a;border-radius:10px;display:block}
 #layerTag{font-size:11px;color:var(--dim);margin-top:3px}
@@ -252,7 +254,21 @@ details.fold[open]>summary{margin-bottom:6px}
 .vslot{display:inline-flex;min-width:40px;min-height:20px;background:#1a2231;border:1px dashed #5b6d8c;border-radius:12px;
   padding:0 5px;align-items:center;vertical-align:middle}
 .vslot.over{border-color:var(--acc);background:#22364f}
+.vslot.on{border-color:var(--acc2);background:#22364f;border-style:solid}
 .vslot .ph{color:#6d7a90;font-size:11px}
+.scrTabs{display:flex;gap:5px;margin:0 0 6px;flex-wrap:wrap;position:sticky;top:0;z-index:2;background:#0f151e;padding:2px 0}
+.scrTabs .tab{padding:3px 10px;font-size:12px;border-radius:7px;border:1px solid var(--line);background:#141c28;color:var(--dim);cursor:pointer}
+.scrTabs .tab.on{background:var(--acc);border-color:var(--acc);color:#04121f;font-weight:700}
+.scrMain .scrTabs .tab{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.scrPal .pb.proc{background:#243447;border-color:#3a5a78}
+.scrPal .pb.new{background:#1d3a2b;border-color:#3c6b4e;color:#c8f0d8}
+.procBox{margin:8px 0;border:1px solid #3f6b50;border-radius:9px;background:#131f1a;padding:6px 8px}
+.procBox .ph{display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-bottom:4px}
+.procBox .ph input[type=text]{width:130px;padding:2px 6px;font-size:12px}
+.procBox .body{margin-left:4px;padding:3px 4px 3px 9px;border-left:2px dashed #6aa07d;min-height:26px}
+.procBox .body.empty:before{content:'（空）把积木拖进来，定义这个自定义积木要做的事';color:#6d7a90;font-size:11px}
+.argRow{display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin:3px 0}
+.tagP{display:inline-block;font-size:11px;background:#2b3a52;border:1px solid #3c4d6b;border-radius:9px;padding:0 7px;margin:2px 3px 2px 0;color:#cfe0f7}
 @media (max-width:860px){ .scrWrap{grid-template-columns:1fr} .scrPal{max-height:34vh} .scrMain{max-height:none} }
 
 /* ---------- 透视校准 ---------- */
@@ -364,6 +380,7 @@ details.fold[open]>summary{margin-bottom:6px}
         <div class="tag" id="clock">☀ 09:00</div>
         <div class="tag" id="statusText">体力充沛</div>
         <div class="tag hidden" id="netBadge">联机 1 人</div>
+        <div class="tag task off" id="taskTag"></div>
       </div>
       <div id="minimapWrap">
         <canvas id="minimap" width="170" height="170"></canvas>
@@ -718,7 +735,11 @@ function migrate(o) {
     script: n.script || null
   }));
   /* 修掉历史存档里可能出现的 0 数量物品（箱子吞物品的元凶） */
-  s.npcs.forEach(n => { if (Array.isArray(n.chest)) n.chest = n.chest.filter(q => q && q.id && q.count > 0); });
+  s.npcs.forEach(n => {
+    if (Array.isArray(n.chest)) n.chest = n.chest.filter(q => q && q.id && q.count > 0);
+    if (n.script && !Array.isArray(n.script.procs)) n.script.procs = [];   /* 自定义积木（新） */
+  });
+  (s.items || []).forEach(i => { if (i.script && !Array.isArray(i.script.procs)) i.script.procs = []; });
   for (const k in (s.drops || {})) s.drops[k] = (s.drops[k] || []).filter(q => q && q.id && q.count > 0);
   s.items = (o.items || []).length ? o.items.map(i => Object.assign(defItem(), i)) : d.items;
   /* 楼梯：旧版是 'up' / 'down' 字符串，升级成任意连接对象 */
@@ -810,7 +831,7 @@ const s2wy = sy => EC.camy + sy / cs();
 const TOOLHINT = {
   photo: '点格子内侧的一条边 → 上传该方向的照片；右键清除。点格子中间查看四边。',
   wall: '点格子之间的边界线 → 加/去墙。被墙挡住的方向无法前进。',
-  portal: '点某条边 → 打开楼梯设置：可任意指定「上/下几层」和「落点偏移」。',
+  portal: '点某条边 → 打开楼梯设置：左边是出发层，<b>在右边地图上点一格</b>就是落点，还能一键生成回程。',
   npc: '先在左侧选中一个物件，再点格子放置；点已有物件可原地转向 90°。',
   item: '点格子 → 编辑这一格「地上的物品」（玩家走到这格会出现拾取按钮）。物品也可以在右侧物品面板里「📍 放置」。',
   spawn: '点格子 → 设置出生点（可有多个，联机时供玩家选择）。',
@@ -1173,7 +1194,7 @@ function worldForm() {
   const box = sec('说明');
   box.appendChild(h('div', { class: 'hint', html:
     '<b>玩法</b>：每个格子有独立的 4 张边照片（不共享）。站在格中朝向哪边就显示哪边照片；左右键原地转向，前后键移动一格。<br>' +
-    '<b>楼梯</b>：用「🌀 楼梯」点某条边，可任意设置上/下几层、落点偏移多少格（例如 2 楼走 1 格、回到 1 层时位置偏移 4 格）。<br>' +
+    '<b>楼梯</b>：用「🌀 楼梯」点某条边 → 弹出两张小地图，左边是出发层（黄框＋箭头），<b>在右边地图上点一格</b>就是玩家上/下楼后站的落点；上面还能直接改「目标层」、一键生成回程。<br>' +
     '<b>物件</b>：NPC、箱、床、灯、篝火、告示牌、门、陷阱、商人、传送阵、刷怪点，每种在右侧都有详细设置。<br>' +
     '<b>脚本</b>：物件 / 物品右侧的「🧩 图形化编程」可拖积木写逻辑；物件行为选「脚本控制」后由脚本接管移动。<br>' +
     '<b>物品落地</b>：右侧物品面板「📍 放置」可放到地面或箱子；也可用「🎁 地面物」工具点格子放。<br>' +
@@ -1183,51 +1204,174 @@ function worldForm() {
   return box;
 }
 
-/* ---------------- 楼梯表单 ---------------- */
+/* ---------------- 楼梯表单（可视化：左＝出发层，右＝落点层，点格子选落点） ---------------- */
+const MM_N = 11, MM_Z = 20;                 // 小地图 11×11 格，每格 20px
+const EDGE_LINE = { n: [0, 0, 1, 0], e: [1, 0, 1, 1], s: [0, 1, 1, 1], w: [0, 0, 0, 1] };
+const EDGE_MIDP = { n: [.5, .08], e: [.92, .5], s: [.5, .92], w: [.08, .5] };
+function mkMiniMap(getLayer, getCam, markFn, onPick) {
+  const N = MM_N, Z = MM_Z, W = N * Z;
+  const cv = document.createElement('canvas');
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  cv.width = W * dpr; cv.height = W * dpr;
+  cv.style.width = W + 'px'; cv.style.height = W + 'px';
+  cv.style.border = '1px solid var(--line)'; cv.style.borderRadius = '8px';
+  cv.style.touchAction = 'none'; cv.style.display = 'block';
+  if (onPick) cv.style.cursor = 'pointer';
+  const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
+  let drag = null, suppress = false;
+  const cellAt = e => {
+    const r = cv.getBoundingClientRect();
+    const i = Math.floor((e.clientX - r.left) / Z), j = Math.floor((e.clientY - r.top) / Z);
+    if (i < 0 || j < 0 || i >= N || j >= N) return null;
+    const cam = getCam();
+    return { x: cam.x - (N >> 1) + i, y: cam.y - (N >> 1) + j, i, j };
+  };
+  const draw = () => {
+    const layer = getLayer(), cam = getCam();
+    const x0 = cam.x - (N >> 1), y0 = cam.y - (N >> 1);
+    ctx.clearRect(0, 0, W, W);
+    ctx.fillStyle = '#0c1119'; ctx.fillRect(0, 0, W, W);
+    for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+      const gx = x0 + i, gy = y0 + j, px = i * Z, py = j * Z;
+      const has = !!S.cells[ck(layer, gx, gy)];
+      ctx.fillStyle = has ? '#1b2736' : '#101722';
+      ctx.fillRect(px + 1, py + 1, Z - 2, Z - 2);
+      if (has) {   /* 墙：粗线画在对应边上 */
+        ctx.strokeStyle = '#465b74'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+        DIRS.forEach(dd => {
+          if (!hasWall(layer, gx, gy, dd)) return;
+          const q = EDGE_LINE[dd];
+          ctx.beginPath(); ctx.moveTo(px + q[0] * Z, py + q[1] * Z); ctx.lineTo(px + q[2] * Z, py + q[3] * Z); ctx.stroke();
+        });
+      }
+      DIRS.forEach(dd => {   /* 已有楼梯：边中点画橙点 */
+        if (!S.portals[ek(layer, gx, gy, dd)]) return;
+        const m = EDGE_MIDP[dd];
+        ctx.fillStyle = '#f0a24b';
+        ctx.beginPath(); ctx.arc(px + m[0] * Z, py + m[1] * Z, 3, 0, Math.PI * 2); ctx.fill();
+      });
+    }
+    ctx.strokeStyle = 'rgba(255,255,255,.05)'; ctx.lineWidth = 1;
+    for (let i = 0; i <= N; i++) {
+      ctx.beginPath(); ctx.moveTo(i * Z, 0); ctx.lineTo(i * Z, W); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, i * Z); ctx.lineTo(W, i * Z); ctx.stroke();
+    }
+    if (markFn) markFn(ctx, x0, y0, Z);
+  };
+  cv.addEventListener('mousedown', e => {
+    drag = { sx: e.clientX, sy: e.clientY, cam: Object.assign({}, getCam()), moved: false };
+    const up = () => { if (drag && drag.moved) suppress = true; drag = null; window.removeEventListener('mouseup', up); };
+    window.addEventListener('mouseup', up);
+  });
+  cv.addEventListener('mousemove', e => {
+    if (drag) {
+      const dx = Math.round((drag.sx - e.clientX) / Z), dy = Math.round((drag.sy - e.clientY) / Z);
+      if (dx || dy) drag.moved = true;
+      const cam = getCam(); cam.x = drag.cam.x + dx; cam.y = drag.cam.y + dy;
+      if (drag.moved) draw();
+      return;
+    }
+    const g = cellAt(e);
+    if (g && cv._hover) cv._hover(g);
+  });
+  if (onPick) cv.addEventListener('click', e => {
+    if (suppress) { suppress = false; return; }
+    const g = cellAt(e); if (g) onPick(g);
+  });
+  return { el: cv, draw, setHover: fn => { cv._hover = fn; } };
+}
 function openPortalForm(l, x, y, d) {
   const cur = S.portals[ek(l, x, y, d)];
-  openModal('楼梯 / 楼层连接  L' + l + ' (' + x + ',' + y + ') ' + DN[d] + '边', m => {
-    const st = cur ? { mode: (cur.al === null || cur.al === undefined) ? 'rel' : 'abs', dl: cur.dl || 0, dx: cur.dx || 0, dy: cur.dy || 0, al: cur.al } : { mode: 'rel', dl: 1, dx: 0, dy: 0, al: null };
-    m.body.appendChild(h('div', { class: 'hint', txt: '朝 ' + DN[d] + ' 方向按「前进」时触发。落点 = 当前格坐标 + 偏移，层 = 当前层 + 层差（或绝对层）。' }));
+  /* 编辑时一律用「目标层 + 落点绝对坐标」，保存时换算回相对值，兼容旧存档 */
+  let tl, tx, ty;
+  if (cur) { const t = portalTarget(l, x, y, cur); tl = t.l; tx = t.x; ty = t.y; }
+  else { tl = l + 1; tx = x; ty = y; }
+  let mode = cur ? ((cur.al === null || cur.al === undefined) ? 'rel' : 'abs') : 'rel';
+  const camL = { x, y }, camR = { x: tx, y: ty };
+
+  openModal('🌀 楼梯 / 楼层连接', m => {
+    m.box.style.maxWidth = 'min(900px,96vw)';
+    m.body.appendChild(h('div', { class: 'hint', html:
+      '从 <b>L' + l + ' (' + x + ',' + y + ')</b> 朝 <b>' + DN[d] + '</b> 前进时触发。<b>在右边地图上点一格</b>，就是玩家上/下楼后站的地方。' }));
+
+    const maps = h('div', { style: 'display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin:6px 0' });
+    const colL = h('div', { style: 'text-align:center' }), colR = h('div', { style: 'text-align:center' });
+    maps.appendChild(colL); maps.appendChild(h('div', { style: 'align-self:center;font-size:22px;color:var(--acc2)', txt: '➜' }));
+    maps.appendChild(colR);
+    m.body.appendChild(maps);
+
+    const mapL = mkMiniMap(() => l, () => camL, (ctx, x0, y0, Z) => {
+      const px = (x - x0) * Z, py = (y - y0) * Z;
+      ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 2;
+      ctx.strokeRect(px + 2, py + 2, Z - 4, Z - 4);
+      const mp = EDGE_MIDP[d];
+      ctx.beginPath(); ctx.moveTo(px + Z / 2, py + Z / 2); ctx.lineTo(px + mp[0] * Z, py + mp[1] * Z); ctx.stroke();
+      ctx.fillStyle = '#ffd166';
+      ctx.beginPath(); ctx.arc(px + mp[0] * Z, py + mp[1] * Z, 3.5, 0, Math.PI * 2); ctx.fill();
+    });
+    const mapR = mkMiniMap(() => tl, () => camR, (ctx, x0, y0, Z) => {
+      const px = (tx - x0) * Z, py = (ty - y0) * Z;
+      ctx.strokeStyle = '#6ee7a0'; ctx.lineWidth = 3;
+      ctx.strokeRect(px + 2, py + 2, Z - 4, Z - 4);
+      ctx.fillStyle = '#6ee7a0';
+      ctx.beginPath(); ctx.arc(px + Z / 2, py + Z / 2, 3.2, 0, Math.PI * 2); ctx.fill();
+    }, g => { tx = g.x; ty = g.y; upd(); });
+
+    const capL = h('div', { class: 'caps', txt: '① 出发：L' + l + ' (' + x + ',' + y + ')' });
+    const capR = h('div', { class: 'caps', txt: '② 落点：L' + tl });
+    const hoverLbl = h('div', { class: 'hint', txt: '点一格选落点（鼠标拖地图可平移）' });
+    colL.appendChild(capL); colL.appendChild(mapL.el);
+    colL.appendChild(h('div', { class: 'hint', txt: '黄框＝这格，箭头＝前进方向' }));
+    colR.appendChild(capR); colR.appendChild(mapR.el); colR.appendChild(hoverLbl);
+    mapR.setHover(g => { hoverLbl.textContent = 'L' + tl + ' (' + g.x + ',' + g.y + ')　点它＝落点'; });
+
     const R = (lab, ...kids) => h('div', { class: 'row' }, h('label', { txt: lab }), ...kids);
-    const modeSel = h('select', { class: 'grow', onchange: e => { st.mode = e.target.value; rebuild(); } },
-      h('option', { value: 'rel', selected: st.mode === 'rel', txt: '相对：上/下 N 层' }),
-      h('option', { value: 'abs', selected: st.mode === 'abs', txt: '绝对：直接去第 N 层' }));
-    const dlIn = h('input', { type: 'number', value: st.mode === 'rel' ? st.dl : (st.al === null ? 1 : st.al), oninput: e => { if (st.mode === 'rel') st.dl = +e.target.value | 0; else st.al = +e.target.value | 0; preview(); } });
-    const dxIn = h('input', { type: 'number', value: st.dx, oninput: e => { st.dx = +e.target.value | 0; preview(); } });
-    const dyIn = h('input', { type: 'number', value: st.dy, oninput: e => { st.dy = +e.target.value | 0; preview(); } });
-    const box = h('div', {});
+    const tlIn = h('input', { type: 'number', value: tl, style: 'width:72px', oninput: e => { tl = +e.target.value | 0; upd(); } });
+    const txIn = h('input', { type: 'number', value: tx, style: 'width:72px', oninput: e => { tx = +e.target.value | 0; upd(); } });
+    const tyIn = h('input', { type: 'number', value: ty, style: 'width:72px', oninput: e => { ty = +e.target.value | 0; upd(); } });
+    const modeSel = h('select', { style: 'width:auto', onchange: e => { mode = e.target.value; upd(); } },
+      h('option', { value: 'rel', selected: mode === 'rel', txt: '相对：记层差（推荐）' }),
+      h('option', { value: 'abs', selected: mode === 'abs', txt: '绝对：固定层号' }));
+    m.body.appendChild(R('目标层',
+      h('button', { txt: '▲ 上一层', onclick: () => { tl++; upd(); } }), tlIn,
+      h('button', { txt: '▼ 下一层', onclick: () => { tl--; upd(); } }),
+      h('span', { class: 'caps', txt: '（可直接改数字跳到任意层）' })));
+    m.body.appendChild(R('落点格',
+      h('span', { txt: 'X' }), txIn, h('span', { txt: 'Y' }), tyIn,
+      h('button', { txt: '正上/正下方', onclick: () => { tx = x; ty = y; upd(); } }),
+      h('button', { txt: '对准出发格', onclick: () => { camR.x = tx; camR.y = ty; upd(); } })));
+    m.body.appendChild(R('记录方式', modeSel,
+      h('span', { class: 'caps', txt: '相对＝存「差几层」；绝对＝存「第几层」。两者效果一样，只是改地图时哪个更省心。' })));
     const pv = h('div', { class: 'hint' });
-    const preview = () => {
-      const v = buildVal();
-      const t = portalTarget(l, x, y, v);
-      pv.innerHTML = '结果：从 L' + l + ' (' + x + ',' + y + ') 朝<b>' + DN[d] + '</b>前进 → <b>L' + t.l + ' (' + t.x + ',' + t.y + ')</b>';
+    m.body.appendChild(pv);
+
+    const buildVal = () => mode === 'abs'
+      ? { dl: 0, dx: tx - x, dy: ty - y, al: tl }
+      : { dl: tl - l, dx: tx - x, dy: ty - y, al: null };
+    const upd = () => {
+      tlIn.value = tl; txIn.value = tx; tyIn.value = ty;
+      mapL.draw(); mapR.draw();
+      const v = buildVal(), t = portalTarget(l, x, y, v);
+      const sgn = n => (n > 0 ? '+' : '') + n;
+      pv.innerHTML = '结果：L' + l + ' (' + x + ',' + y + ') 朝 <b>' + DN[d] + '</b> 前进 → <b>L' + t.l + ' (' + t.x + ',' + t.y + ')</b>' +
+        '　层差 <b>' + sgn(t.l - l) + '</b>，落点偏移 <b>' + sgn(t.x - x) + ',' + sgn(t.y - y) + '</b>' +
+        (S.cells[ck(t.l, t.x, t.y)] ? '' : '　<span style="color:var(--acc2)">（提示：落点这格还没放照片，过去会是一片空）</span>');
+      capR.textContent = '② 落点：L' + tl + ' (' + tx + ',' + ty + ')';
     };
-    const buildVal = () => st.mode === 'rel' ? { dl: st.dl | 0, dx: st.dx | 0, dy: st.dy | 0, al: null } : { dl: 0, dx: st.dx | 0, dy: st.dy | 0, al: (st.al === null ? l : st.al | 0) };
-    const rebuild = () => {
-      clear(box);
-      box.appendChild(R(st.mode === 'rel' ? '层差（+上 -下）' : '目标层', modeSel, dlIn));
-      box.appendChild(R('落点偏移 X', dxIn, h('span', { txt: '格（可为负）' })));
-      box.appendChild(R('落点偏移 Y', dyIn));
-      box.appendChild(h('div', { class: 'row' },
-        h('button', { txt: '上一层', onclick: () => { st.mode = 'rel'; st.dl = 1; modeSel.value = 'rel'; dlIn.value = 1; preview(); } }),
-        h('button', { txt: '下一层', onclick: () => { st.mode = 'rel'; st.dl = -1; modeSel.value = 'rel'; dlIn.value = -1; preview(); } }),
-        h('button', { txt: '归零', onclick: () => { st.dx = 0; st.dy = 0; dxIn.value = 0; dyIn.value = 0; preview(); } })));
-      preview();
-    };
-    m.body.appendChild(box); rebuild(); m.body.appendChild(pv);
-    m.foot.appendChild(h('button', { class: 'danger', txt: '删除楼梯', onclick: () => { setPortal(l, x, y, d, null); m.close(); refresh(); toast('已删除'); } }));
+
+    m.foot.appendChild(h('button', { class: 'danger', txt: '🗑 删除楼梯', onclick: () => { setPortal(l, x, y, d, null); m.close(); refresh(); drawEditor(); toast('已删除楼梯'); } }));
     m.foot.appendChild(h('button', {
-      txt: '生成回程', onclick: () => {
+      txt: '🔗 生成回程', onclick: () => {
         const v = buildVal(), t = portalTarget(l, x, y, v);
-        const back = { dl: l - t.l, dx: x - t.x, dy: y - t.y, al: null };
         setPortal(l, x, y, d, v);
-        setPortal(t.l, t.x, t.y, OPP[d], back);
-        m.close(); refresh(); toast('已互连：L' + t.l + '(' + t.x + ',' + t.y + ') 朝' + DN[OPP[d]] + '可回来');
+        setPortal(t.l, t.x, t.y, OPP[d], { dl: l - t.l, dx: x - t.x, dy: y - t.y, al: null });
+        m.close(); refresh(); drawEditor();
+        toast('已互连：L' + t.l + '(' + t.x + ',' + t.y + ') 朝' + DN[OPP[d]] + '可回来');
       }
     }));
     m.foot.appendChild(h('button', { txt: '取消', onclick: m.close }));
-    m.foot.appendChild(h('button', { class: 'primary', txt: '保存', onclick: () => { setPortal(l, x, y, d, buildVal()); m.close(); refresh(); toast('楼梯已保存'); } }));
+    m.foot.appendChild(h('button', { class: 'primary', txt: '保存', onclick: () => { setPortal(l, x, y, d, buildVal()); m.close(); refresh(); drawEditor(); toast('楼梯已保存'); } }));
+    upd();
   });
 }
 
@@ -1603,6 +1747,11 @@ function refresh() { renderNpcList(); renderSpawnList(); renderItemList(); rende
       block = {id, t, a:{...}, do:[...], do2:[...]}
    ============================================================ */
 const BUID = () => 'b' + Math.random().toString(36).slice(2, 9);
+/* —— 全局脚本状态：全局变量 / 按键 / 询问 —— */
+const GVAR = {};        // 全局变量（所有物件共享，每次进入游玩清空）
+const KEYS = {};        // 键盘按下状态
+const ASK = { v: null }; // 「询问」积木的回答
+const NETEV = { chat: 0, death: 0, chatName: '', chatText: '' };  // 全局事件计数器
 const DIR_REL = [['front', '前方'], ['back', '后方'], ['left', '左方'], ['right', '右方'], ['random', '随机'],
   ['toPlayer', '朝玩家'], ['awayPlayer', '远离玩家']];
 const TURN_OPTS = [['left', '左转'], ['right', '右转'], ['back', '转身'], ['random', '随机'],
@@ -1626,70 +1775,239 @@ const EVDEF = {
   var:      { n: '当变量满足条件', npc: 1, item: 1, cond: 1 },
   use:      { n: '当被使用', item: 1 },
   equip:    { n: '当被装备', item: 1 },
-  pick:     { n: '当被拾取', item: 1 }
+  pick:     { n: '当被拾取', item: 1 },
+  /* —— 新版 —— */
+  msg:      { n: '📢 当收到广播', npc: 1, item: 1, p: [{ k: 'msg', str: '消息1', lbl: '消息名', w: 84, ph: '消息1' }] },
+  key:      { n: '⌨ 当按下某个键', npc: 1, item: 1, p: [{ k: 'key', str: 'e', lbl: '键', w: 74, ph: 'e' }] },
+  atTime:   { n: '🕑 当时间到 N 点', npc: 1, item: 1, p: [{ k: 'h', num: 12, min: 0, max: 23, step: 1, lbl: '点' }] },
+  day:      { n: '☀ 当天亮了', npc: 1, item: 1 },
+  night:    { n: '🌙 当天黑了', npc: 1, item: 1 },
+  clone:    { n: '👥 当作为克隆体启动', npc: 1 },
+  hurtOther:{ n: '💥 当任意 NPC 倒下', npc: 1, item: 1 },
+  chat:     { n: '💬 当有人发言', npc: 1, item: 1 },
+  gvar:     { n: '🌐 当全局变量满足条件', npc: 1, item: 1, cond: 1, gv: 1 }
 };
 function evA(name) {
   const d = EVDEF[name] || {}; const a = {};
-  (d.p || []).forEach(x => { a[x.k] = x.num; });
-  if (d.cond) { a.op = '>'; a.l = { id: BUID(), t: 'v.dist', a: {} }; a.r = { id: BUID(), t: 'v.num', a: { v: 3 } }; }
+  (d.p || []).forEach(x => { a[x.k] = (x.str !== undefined) ? x.str : x.num; });
+  if (d.cond) {
+    a.op = '>';
+    a.l = { id: BUID(), t: (d.gv ? 'v.gvar' : 'v.var'), a: { name: d.gv ? 'G' : 'A' } };
+    a.r = { id: BUID(), t: 'v.num', a: { v: 3 } };
+  }
   return a;
 }
 function mkEv(name) { return { id: BUID(), ev: name, a: evA(name), body: [] }; }
 
+/* ---------------- 目标选择器 ---------------- */
+const TGTSEL = [['self', '自己'], ['player', '玩家'], ['nearest', '最近的 NPC'], ['all', '全部 NPC'],
+  ['allObj', '全部物件'], ['named', '名叫…的']];
+function tgtParts(b) {
+  const a = (b && b.a) || {};
+  const out = [{ k: 'tgt', sel: TGTSEL }];
+  if (a.tgt === 'named') out.push({ k: 'name', str: a.name || '', w: 84 });
+  return out;
+}
+/* ---------------- 自定义积木（过程）参数槽 ---------------- */
+/* 「参数」积木的可选项：当前自定义积木的参数名（不在过程里时列出全部） */
+function curArgOpts() {
+  const out = [];
+  const p = (SE && SE.curProc) ? curProc(SE.curProc) : null;
+  const lists = p ? [p] : procList();
+  lists.forEach(q => (q.args || []).forEach(nm => { if (String(nm || '').trim() && !out.some(o => o[0] === nm)) out.push([nm, nm]); }));
+  if (!out.length) out.push(['a', '参数 a']);
+  return out;
+}
+function curProc(id) {
+  const sc = SE && SE.obj && SE.obj.script;
+  if (!sc || !sc.procs) return null;
+  for (const p of sc.procs) if (p.id === id) return p;
+  return null;
+}
+function procParts(b) {
+  const out = [{ k: 'proc', proc: 1 }];
+  const p = curProc(b && b.a ? b.a.proc : '');
+  if (p) (p.args || []).forEach((nm, i) => { out.push(String(nm || ('参数' + (i + 1))) + '：'); out.push({ k: 'a', i, arg: 1 }); });
+  return out;
+}
+
 /* ---------------- 表达式（值）积木 ---------------- */
+const MATHF = [['floor', '向下取整'], ['ceil', '向上取整'], ['round', '四舍五入'], ['abs', '绝对值'], ['sqrt', '平方根'],
+  ['sin', 'sin'], ['cos', 'cos'], ['tan', 'tan'], ['atan', 'atan'], ['ln', 'ln'], ['exp', 'e 的…次方'], ['sign', '正负号']];
 const VAL = {
-  'v.num':   { cat: '值', def: { v: 0 }, parts: [{ k: 'v', num: 0, step: 1 }] },
-  'v.txt':   { cat: '值', def: { v: '' }, parts: [{ k: 'v', str: '' }] },
-  'v.dist':  { cat: '值', label: '到玩家的距离' },
-  'v.myhp':  { cat: '值', label: '我的生命' },
-  'v.php':   { cat: '值', label: '玩家生命' },
-  'v.hour':  { cat: '值', label: '当前时刻(0-24)' },
-  'v.dark':  { cat: '值', label: '黑暗程度(0-1)' },
-  'v.wall':  { cat: '值', label: '前方是否有墙(1/0)' },
-  'v.rnd':   { cat: '值', def: { v: 6 }, parts: ['随机 1 ~', { k: 'v', num: 6, min: 1, step: 1 }] },
-  'v.cnt':   { cat: '值', def: { id: '' }, parts: ['玩家的', { k: 'id', item: 1 }, '数量'] },
-  'v.mycnt': { cat: '值', def: { id: '' }, parts: ['我容器里的', { k: 'id', item: 1 }, '数量'] },
-  'v.var':   { cat: '值', def: { name: 'A' }, parts: ['变量', { k: 'name', str: 'A', w: 70 }] },
-  'v.op':    { cat: '值', def: { o: '+' }, vs: ['l', 'r'],
-               parts: [{ k: 'l', val: 1 }, { k: 'o', sel: [['+', '+'], ['-', '−'], ['*', '×'], ['/', '÷']] }, { k: 'r', val: 1 }] },
-  'v.join':  { cat: '值', def: {}, vs: ['l', 'r'], parts: ['连接', { k: 'l', val: 1 }, '和', { k: 'r', val: 1 }] }
+  /* ===== 运算 ===== */
+  'v.num':    { cat: '运算', def: { v: 0 }, parts: [{ k: 'v', num: 0, step: 1 }] },
+  'v.txt':    { cat: '运算', def: { v: '' }, parts: [{ k: 'v', str: '', w: 90 }] },
+  'v.bool':   { cat: '运算', def: { v: 'true' }, parts: [{ k: 'v', sel: [['true', '真'], ['false', '假']] }] },
+  'v.op':     { cat: '运算', def: { o: '+' }, vs: ['l', 'r'],
+                parts: [{ k: 'l', val: 1 }, { k: 'o', sel: [['+', '+'], ['-', '−'], ['*', '×'], ['/', '÷'], ['^', '^']] }, { k: 'r', val: 1 }] },
+  'v.mod':    { cat: '运算', def: {}, vs: ['l', 'r'], parts: [{ k: 'l', val: 1 }, '除以', { k: 'r', val: 1 }, '的余数'] },
+  'v.round':  { cat: '运算', def: { f: 'round' }, vs: ['v'],
+                parts: [{ k: 'f', sel: MATHF.slice(0, 5) }, '(', { k: 'v', val: 1 }, ')'] },
+  'v.math':   { cat: '运算', def: { f: 'sqrt' }, vs: ['v'], parts: [{ k: 'f', sel: MATHF }, '(', { k: 'v', val: 1 }, ')'] },
+  'v.minmax': { cat: '运算', def: { f: 'min' }, vs: ['l', 'r'],
+                parts: [{ k: 'f', sel: [['min', '较小'], ['max', '较大']] }, { k: 'l', val: 1 }, '和', { k: 'r', val: 1 }] },
+  'v.rnd':    { cat: '运算', def: { v: 6 }, parts: ['随机整数 1 ~', { k: 'v', num: 6, min: 1, step: 1 }] },
+  'v.rndf':   { cat: '运算', def: { a: 0, b: 1 }, parts: ['随机小数', { k: 'a', num: 0, step: 0.1 }, '~', { k: 'b', num: 1, step: 0.1 }] },
+  'v.and':    { cat: '运算', def: {}, vs: ['l', 'r'], parts: [{ k: 'l', val: 1 }, '且', { k: 'r', val: 1 }] },
+  'v.or':     { cat: '运算', def: {}, vs: ['l', 'r'], parts: [{ k: 'l', val: 1 }, '或', { k: 'r', val: 1 }] },
+  'v.not':    { cat: '运算', def: {}, vs: ['v'], parts: ['非', { k: 'v', val: 1 }] },
+  'v.cmpb':   { cat: '运算', def: { op: '>' }, vs: ['l', 'r'],
+                parts: [{ k: 'l', val: 1 }, { k: 'op', sel: CMP }, { k: 'r', val: 1 }, '（真=1）'] },
+  'v.join':   { cat: '运算', def: {}, vs: ['l', 'r'], parts: ['连接', { k: 'l', val: 1 }, '和', { k: 'r', val: 1 }] },
+  'v.strlen': { cat: '运算', def: {}, vs: ['v'], parts: ['文本', { k: 'v', val: 1 }, '的长度'] },
+  'v.strat':  { cat: '运算', def: { n: 1 }, vs: ['v'], parts: ['文本', { k: 'v', val: 1 }, '的第', { k: 'n', num: 1, min: 1, step: 1 }, '个字'] },
+  'v.strhas': { cat: '运算', def: {}, vs: ['l', 'r'], parts: ['文本', { k: 'l', val: 1 }, '含有', { k: 'r', val: 1 }, '（真=1）'] },
+  'v.numof':  { cat: '运算', def: {}, vs: ['v'], parts: ['把', { k: 'v', val: 1 }, '当成数字'] },
+  'v.strof':  { cat: '运算', def: {}, vs: ['v'], parts: ['把', { k: 'v', val: 1 }, '当成文本'] },
+  /* ===== 数据 ===== */
+  'v.var':      { cat: '数据', def: { name: 'A' }, parts: ['变量', { k: 'name', str: 'A', w: 70 }] },
+  'v.gvar':     { cat: '数据', def: { name: 'G' }, parts: ['全局变量', { k: 'name', str: 'G', w: 70 }] },
+  'v.listlen':  { cat: '数据', def: { name: 'L' }, parts: ['列表', { k: 'name', str: 'L', w: 66 }, '的长度'] },
+  'v.listat':   { cat: '数据', def: { name: 'L', n: 1 }, parts: ['列表', { k: 'name', str: 'L', w: 66 }, '的第', { k: 'n', num: 1, min: 1, step: 1 }, '项'] },
+  'v.listfind': { cat: '数据', def: { name: 'L' }, vs: ['v'],
+                  parts: ['列表', { k: 'name', str: 'L', w: 66 }, '里', { k: 'v', val: 1 }, '在第几项（0=没有）'] },
+  /* ===== 我的积木 ===== */
+  'v.arg':  { cat: '我的积木', def: { name: 'a' }, parts: () => ['参数', { k: 'name', sel: curArgOpts() }] },
+  'v.ret':  { cat: '我的积木', label: '上次调用的返回值' },
+  'v.call': { cat: '我的积木', def: { proc: '' }, dyn: true, parts: procParts },
+  /* ===== 侦测 ===== */
+  'v.dist':    { cat: '侦测', label: '到玩家的距离' },
+  'v.myhp':    { cat: '侦测', label: '我的生命' },
+  'v.php':     { cat: '侦测', label: '玩家生命' },
+  'v.phpmax':  { cat: '侦测', label: '玩家生命上限' },
+  'v.hour':    { cat: '侦测', label: '当前时刻(0-24)' },
+  'v.dark':    { cat: '侦测', label: '黑暗程度(0-1)' },
+  'v.wall':    { cat: '侦测', label: '前方是否有墙(1/0)' },
+  'v.walld':   { cat: '侦测', def: { d: 'n' }, parts: ['朝', { k: 'd', sel: DIR_ABS }, '有墙吗(1/0)'] },
+  'v.myx':     { cat: '侦测', label: '我的 X' },
+  'v.myy':     { cat: '侦测', label: '我的 Y' },
+  'v.myl':     { cat: '侦测', label: '我的层' },
+  'v.myface':  { cat: '侦测', label: '我的朝向(北0东1南2西3)' },
+  'v.px':      { cat: '侦测', label: '玩家 X' },
+  'v.py':      { cat: '侦测', label: '玩家 Y' },
+  'v.pl':      { cat: '侦测', label: '玩家所在层' },
+  'v.pface':   { cat: '侦测', label: '玩家朝向(北0东1南2西3)' },
+  'v.timer':   { cat: '侦测', label: '开局到现在多少秒' },
+  'v.key':     { cat: '侦测', def: { k: 'e' }, parts: ['按键', { k: 'k', str: 'e', w: 54 }, '正被按下(1/0)'] },
+  'v.answer':  { cat: '侦测', label: '最近一次「询问」的回答' },
+  'v.randname':{ cat: '侦测', label: '随机一个在线玩家名' },
+  'v.chatname':{ cat: '侦测', label: '最近发言的人' },
+  'v.chattxt': { cat: '侦测', label: '最近发言的内容' },
+  'v.cnt':     { cat: '侦测', def: { id: '' }, parts: ['玩家的', { k: 'id', item: 1 }, '数量'] },
+  'v.mycnt':   { cat: '侦测', def: { id: '' }, parts: ['我容器里的', { k: 'id', item: 1 }, '数量'] },
+  'v.npccnt':  { cat: '侦测', def: { type: 'normal' },
+                 parts: ['场上', { k: 'type', sel: () => Object.keys(TYPES).map(k => [k, TYPES[k].icon + TYPES[k].label]) }, '的数量'] },
+  'v.cellobj': { cat: '侦测', def: {}, vs: ['x', 'y'],
+                 parts: ['(', { k: 'x', val: 1 }, ',', { k: 'y', val: 1 }, ') 这格有物件吗(1/0)'] }
 };
+function truthy(v) {
+  if (typeof v === 'string') { const s = v.trim().toLowerCase(); return !(s === '' || s === 'false' || s === '0'); }
+  return !!v;
+}
 function evalVal(b, vm) {
   if (!b) return 0;
   switch (b.t) {
     case 'v.num': return +b.a.v || 0;
     case 'v.txt': return String(b.a.v == null ? '' : b.a.v);
+    case 'v.bool': return b.a.v === 'false' ? 0 : 1;
     case 'v.dist': return vm.dist();
     case 'v.myhp': return (vm.kind === 'npc') ? ((vm.r && vm.r.hp) || 0) : P.hp;
     case 'v.php': return P.hp;
+    case 'v.phpmax': return P.maxhp;
     case 'v.hour': return P.time;
     case 'v.dark': return darkness();
     case 'v.wall': return vm.wallAhead() ? 1 : 0;
+    case 'v.walld': return vm.wallDir(b.a.d) ? 1 : 0;
     case 'v.rnd': return 1 + Math.floor(Math.random() * Math.max(1, +b.a.v || 1));
+    case 'v.rndf': { const a0 = +b.a.a || 0, b0 = +b.a.b || 0; return Math.min(a0, b0) + Math.random() * Math.abs(b0 - a0); }
     case 'v.cnt': return countInv(b.a.id);
     case 'v.mycnt': return vm.myCount(b.a.id);
     case 'v.var': return vm.getVar(b.a.name || 'A');
+    case 'v.gvar': { const n = b.a.name || 'G'; return GVAR[n] === undefined ? 0 : GVAR[n]; }
     case 'v.op': {
       const l = +evalVal(b.a.l, vm) || 0, r = +evalVal(b.a.r, vm) || 0;
       if (b.a.o === '-') return l - r;
       if (b.a.o === '*') return l * r;
       if (b.a.o === '/') return r === 0 ? 0 : l / r;
+      if (b.a.o === '^') return Math.pow(l, r);
       return l + r;
     }
+    case 'v.mod': { const l = +evalVal(b.a.l, vm) || 0, r = +evalVal(b.a.r, vm) || 0; return r === 0 ? 0 : l % r; }
+    case 'v.round': {
+      const v = +evalVal(b.a.v, vm) || 0;
+      if (b.a.f === 'floor') return Math.floor(v);
+      if (b.a.f === 'ceil') return Math.ceil(v);
+      if (b.a.f === 'abs') return Math.abs(v);
+      if (b.a.f === 'sqrt') return Math.sqrt(Math.max(0, v));
+      return Math.round(v);
+    }
+    case 'v.math': {
+      const v = +evalVal(b.a.v, vm) || 0;
+      switch (b.a.f) {
+        case 'sin': return Math.sin(v); case 'cos': return Math.cos(v); case 'tan': return Math.tan(v);
+        case 'atan': return Math.atan(v); case 'ln': return Math.log(Math.max(1e-9, v)); case 'exp': return Math.exp(v);
+        case 'sign': return v > 0 ? 1 : v < 0 ? -1 : 0;
+        default: return Math.sqrt(Math.max(0, v));
+      }
+    }
+    case 'v.minmax': {
+      const l = +evalVal(b.a.l, vm) || 0, r = +evalVal(b.a.r, vm) || 0;
+      return b.a.f === 'max' ? Math.max(l, r) : Math.min(l, r);
+    }
+    case 'v.and': return (truthy(evalVal(b.a.l, vm)) && truthy(evalVal(b.a.r, vm))) ? 1 : 0;
+    case 'v.or': return (truthy(evalVal(b.a.l, vm)) || truthy(evalVal(b.a.r, vm))) ? 1 : 0;
+    case 'v.not': return truthy(evalVal(b.a.v, vm)) ? 0 : 1;
+    case 'v.cmpb': return cmpVal(evalVal(b.a.l, vm), b.a.op || '>', evalVal(b.a.r, vm)) ? 1 : 0;
     case 'v.join': return String(evalVal(b.a.l, vm)) + String(evalVal(b.a.r, vm));
+    case 'v.strlen': return String(evalVal(b.a.v, vm)).length;
+    case 'v.strat': { const s = String(evalVal(b.a.v, vm)); const i = Math.max(1, Math.round(+b.a.n || 1)); return s.charAt(i - 1) || ''; }
+    case 'v.strhas': return String(evalVal(b.a.l, vm)).indexOf(String(evalVal(b.a.r, vm))) >= 0 ? 1 : 0;
+    case 'v.numof': { const n = parseFloat(String(evalVal(b.a.v, vm))); return isNaN(n) ? 0 : n; }
+    case 'v.strof': { const v = evalVal(b.a.v, vm); return typeof v === 'number' ? (Math.round(v * 1000) / 1000) : String(v); }
+    case 'v.listlen': return vm.getList(b.a.name).length;
+    case 'v.listat': { const L = vm.getList(b.a.name); const i = Math.max(1, Math.round(+b.a.n || 1)); return i <= L.length ? L[i - 1] : 0; }
+    case 'v.listfind': { const L = vm.getList(b.a.name), v = evalVal(b.a.v, vm); const i = L.findIndex(q => String(q) === String(v)); return i < 0 ? 0 : i + 1; }
+    case 'v.arg': return vm.getArg(b.a.name || 'a');
+    case 'v.ret': return vm.ret === undefined ? 0 : vm.ret;
+    case 'v.call': return vm.callProcValue(b.a.proc, b.a.args || []);
+    /* —— 侦测 —— */
+    case 'v.myx': return vm.kind === 'npc' ? (vm.r ? vm.r.x : 0) : P.x;
+    case 'v.myy': return vm.kind === 'npc' ? (vm.r ? vm.r.y : 0) : P.y;
+    case 'v.myl': return vm.kind === 'npc' ? (vm.r ? vm.r.layer : 0) : P.layer;
+    case 'v.myface': return DI(vm.kind === 'npc' ? (vm.obj.facing || 'n') : P.facing);
+    case 'v.px': return P.x;
+    case 'v.py': return P.y;
+    case 'v.pl': return P.layer;
+    case 'v.pface': return DI(P.facing);
+    case 'v.timer': return P.t;
+    case 'v.key': return KEYS[String(b.a.k || '').toLowerCase()] ? 1 : 0;
+    case 'v.answer': return ASK.v === null ? '' : ASK.v;
+    case 'v.randname': { const ps = Array.from(Net.peers.values()); return ps.length ? ps[(Math.random() * ps.length) | 0].name : Net.name; }
+    case 'v.chatname': return NETEV.chatName || '';
+    case 'v.chattxt': return NETEV.chatText || '';
+    case 'v.npccnt': return allNpcs().filter(n => (n.type || 'normal') === (b.a.type || 'normal') && !rt(n).dead).length;
+    case 'v.cellobj': {
+      const l = vm.kind === 'npc' ? (vm.r ? vm.r.layer : P.layer) : P.layer;
+      return allNpcs().some(n => n.layer === l && n.x === (+evalVal(b.a.x, vm) | 0) && n.y === (+evalVal(b.a.y, vm) | 0)) ? 1 : 0;
+    }
   }
   return 0;
 }
 function cmpVal(a, op, b) {
-  if (typeof a === 'string' || typeof b === 'string') {
-    const x = String(a), y = String(b);
-    return op === '=' ? x === y : op === '!=' ? x !== y : op === '>' ? x > y : op === '<' ? x < y : op === '>=' ? x >= y : x <= y;
+  const na = (typeof a === 'number'), nb = (typeof b === 'number');
+  if (na && nb) {
+    switch (op) {
+      case '>': return a > b; case '<': return a < b; case '=': return Math.abs(a - b) < 1e-6;
+      case '>=': return a >= b; case '<=': return a <= b;
+    }
+    return a !== b;
   }
-  switch (op) {
-    case '>': return a > b; case '<': return a < b; case '=': return Math.abs(a - b) < 1e-6;
-    case '>=': return a >= b; case '<=': return a <= b;
-  }
-  return a !== b;
+  /* 一边是文本 → 若另一个是数字就先转数字比较，否则按文本比较 */
+  let x = a, y = b;
+  if (na || nb) { const p = parseFloat(String(na ? b : a)); if (!isNaN(p)) { x = +a || 0; y = +b || 0; } }
+  const sx = String(x), sy = String(y);
+  return op === '=' ? sx === sy : op === '!=' ? sx !== sy : op === '>' ? sx > sy : op === '<' ? sx < sy : op === '>=' ? sx >= sy : sx <= sy;
 }
 function countInv(id) { let s = 0; for (const q of P.inv) if (q && q.id === id) s += q.count; return s; }
 
@@ -1813,31 +2131,370 @@ const BLK = {
       let g = 0;
       while (vm.pick === null && g++ < 900) yield 0.1;
       yield* execSeq((vm.pick === 2) ? (b.do2 || []) : (b.do || []), vm);
-    } }
+    } },
+
+  /* ================= 控制（进阶） ================= */
+  repeatUntil: { cat: '控制', subs: 1, def: { op: '>' }, vs: ['l', 'r'],
+    parts: ['重复直到', { k: 'l', val: 1 }, { k: 'op', sel: CMP }, { k: 'r', val: 1 }, { k: 'do', body: 'do', label: '' }],
+    run: function* (b, vm) {
+      let g = 0;
+      while (!cmpVal(evalVal(b.a.l, vm), b.a.op || '>', evalVal(b.a.r, vm)) && g++ < 100000 && !vm.stop) {
+        yield* execSeq(b.do || [], vm);
+        if (vm.stop) break;
+        yield 0.03;
+      }
+    } },
+  forEach: { cat: '控制', subs: 1, def: { name: 'L', v: 'x' },
+    parts: ['对列表', { k: 'name', str: 'L', w: 66 }, '里的每一项（存进变量', { k: 'v', str: 'x', w: 58 }, '）', { k: 'do', body: 'do', label: '' }],
+    run: function* (b, vm) {
+      const L = vm.getList(b.a.name).slice(); let g = 0;
+      for (const it of L) {
+        if (vm.stop || g++ > 5000) break;
+        vm.setVar(b.a.v || 'x', it);
+        yield* execSeq(b.do || [], vm);
+        if (vm.stop) break;
+        yield 0.02;
+      }
+    } },
+  stopAll: { cat: '控制', parts: ['停止这个物件的全部脚本'],
+    run: function* (b, vm) { vm.stopAll(); yield 0.05; } },
+  note: { cat: '控制', def: { text: '这里做什么…' }, parts: ['📝 备注', { k: 'text', str: '这里做什么…', w: 150 }],
+    run: function* (b, vm) { yield 0.01; } },
+
+  /* ================= 我的积木（过程 / 函数，可递归） ================= */
+  call: { cat: '我的积木', def: { proc: '' }, dyn: true, parts: procParts,
+    run: function* (b, vm) { yield* vm.callProc(b.a.proc, b.a.args || []); } },
+  setRet: { cat: '我的积木', def: {}, vs: ['v'], parts: ['返回', { k: 'v', val: 1 }],
+    run: function* (b, vm) { vm.ret = evalVal(b.a.v, vm); yield 0.02; } },
+  stopProc: { cat: '我的积木', parts: ['结束这个自定义积木'],
+    run: function* (b, vm) { vm.procBreak = true; yield 0.01; } },
+
+  /* ================= 数据（变量 / 列表 / 全局变量） ================= */
+  setGVar: { cat: '数据', def: { name: 'G' }, vs: ['v'],
+    parts: ['把全局变量', { k: 'name', str: 'G', w: 70 }, '设为', { k: 'v', val: 1 }],
+    run: function* (b, vm) { GVAR[b.a.name || 'G'] = evalVal(b.a.v, vm); yield 0.02; } },
+  changeGVar: { cat: '数据', def: { name: 'G' }, vs: ['v'],
+    parts: ['把全局变量', { k: 'name', str: 'G', w: 70 }, '增加', { k: 'v', val: 1 }],
+    run: function* (b, vm) { const n = b.a.name || 'G'; GVAR[n] = (+GVAR[n] || 0) + (+evalVal(b.a.v, vm) || 0); yield 0.02; } },
+  delGVar: { cat: '数据', def: { name: 'G' }, parts: ['删除全局变量', { k: 'name', str: 'G', w: 70 }],
+    run: function* (b, vm) { delete GVAR[b.a.name || 'G']; yield 0.02; } },
+  clearGVars: { cat: '数据', parts: ['清空所有全局变量'],
+    run: function* (b, vm) { for (const k in GVAR) delete GVAR[k]; yield 0.02; } },
+  delVar: { cat: '数据', def: { name: 'A' }, parts: ['删除变量', { k: 'name', str: 'A', w: 70 }],
+    run: function* (b, vm) { vm.delVar(b.a.name || 'A'); yield 0.02; } },
+  listAdd: { cat: '数据', def: { name: 'L' }, vs: ['v'],
+    parts: ['把', { k: 'v', val: 1 }, '加到列表', { k: 'name', str: 'L', w: 66 }, '末尾'],
+    run: function* (b, vm) { vm.getList(b.a.name).push(evalVal(b.a.v, vm)); yield 0.02; } },
+  listIns: { cat: '数据', def: { name: 'L', n: 1 }, vs: ['v'],
+    parts: ['把', { k: 'v', val: 1 }, '插到列表', { k: 'name', str: 'L', w: 66 }, '的第', { k: 'n', num: 1, min: 1, step: 1 }, '项前'],
+    run: function* (b, vm) { const L = vm.getList(b.a.name); const i = clamp(Math.round(+b.a.n || 1) - 1, 0, L.length); L.splice(i, 0, evalVal(b.a.v, vm)); yield 0.02; } },
+  listSet: { cat: '数据', def: { name: 'L', n: 1 }, vs: ['v'],
+    parts: ['把列表', { k: 'name', str: 'L', w: 66 }, '的第', { k: 'n', num: 1, min: 1, step: 1 }, '项换成', { k: 'v', val: 1 }],
+    run: function* (b, vm) { const L = vm.getList(b.a.name); const i = Math.round(+b.a.n || 1) - 1; if (i >= 0 && i < L.length) L[i] = evalVal(b.a.v, vm); yield 0.02; } },
+  listDel: { cat: '数据', def: { name: 'L', n: 1 },
+    parts: ['删除列表', { k: 'name', str: 'L', w: 66 }, '的第', { k: 'n', num: 1, min: 1, step: 1 }, '项'],
+    run: function* (b, vm) { const L = vm.getList(b.a.name); const i = Math.round(+b.a.n || 1) - 1; if (i >= 0 && i < L.length) L.splice(i, 1); yield 0.02; } },
+  listClear: { cat: '数据', def: { name: 'L' }, parts: ['清空列表', { k: 'name', str: 'L', w: 66 }],
+    run: function* (b, vm) { vm.setList(b.a.name, []); yield 0.02; } },
+
+  /* ================= 侦测 ================= */
+  ask: { cat: '侦测', def: { text: '你叫什么名字？' }, parts: ['询问', { k: 'text', str: '你叫什么名字？', w: 130 }, '并等待回答'],
+    run: function* (b, vm) {
+      ASK.v = null;
+      openModal('询问', mm => {
+        const inp = h('input', { class: 'grow', value: '' });
+        mm.body.appendChild(h('div', { style: 'white-space:pre-wrap;line-height:1.6', txt: b.a.text || '' }));
+        const ok = () => { ASK.v = inp.value || ''; mm.close(); };
+        inp.addEventListener('keydown', e => { if (e.key === 'Enter') ok(); });
+        mm.body.appendChild(h('div', { class: 'row' }, inp, h('button', { class: 'primary', txt: '确定', onclick: ok })));
+        mm.foot.appendChild(h('button', { txt: '取消', onclick: () => { ASK.v = ''; mm.close(); } }));
+        setTimeout(() => inp.focus(), 60);
+      }, { closeOnMask: false });
+      let g = 0;
+      while (ASK.v === null && g++ < 900) yield 0.1;
+      if (ASK.v === null) ASK.v = '';
+    } },
+  debugLog: { cat: '侦测', def: {}, vs: ['v'], parts: ['🪵 调试输出', { k: 'v', val: 1 }],
+    run: function* (b, vm) { console.log('[脚本]', ((vm.obj && vm.obj.name) || '?') + '：', evalVal(b.a.v, vm)); yield 0.02; } },
+
+  /* ================= 物件之间（互相操控） ================= */
+  tSay: { cat: '物件', def: { tgt: 'self', text: '…', sec: 2.5 },
+    parts: b => ['让', ...tgtParts(b), '说', { k: 'text', str: '…', w: 100 }, { k: 'sec', num: 2.5, min: 0.5, step: 0.5 }, '秒'],
+    run: function* (b, vm) {
+      for (const t of vm.targets(b.a.tgt, b.a.name)) {
+        if (t.kind === 'player') toast(String(b.a.text));
+        else if (t.r) t.r.say = { t: String(b.a.text), until: P.t + (+b.a.sec || 2) };
+      }
+      yield 0.05;
+    } },
+  tMove: { cat: '物件', def: { tgt: 'self', dir: 'front', n: 1 },
+    parts: b => ['让', ...tgtParts(b), '向', { k: 'dir', sel: DIR_REL }, '走', { k: 'n', num: 1, min: 1, max: 30, step: 1 }, '格'],
+    run: function* (b, vm) {
+      for (const t of vm.targets(b.a.tgt, b.a.name)) if (t.kind === 'npc') yield* moveTargetN(t, b.a.dir, b.a.n);
+    } },
+  tTurn: { cat: '物件', def: { tgt: 'self', dir: 'left' },
+    parts: b => ['让', ...tgtParts(b), '转向', { k: 'dir', sel: TURN_OPTS }],
+    run: function* (b, vm) {
+      for (const t of vm.targets(b.a.tgt, b.a.name)) {
+        if (t.kind !== 'npc') continue;
+        const o = t.obj; let d = null;
+        if (b.a.dir === 'left') d = CCW[o.facing];
+        else if (b.a.dir === 'right') d = CW[o.facing];
+        else if (b.a.dir === 'back') d = OPP[o.facing];
+        else if (b.a.dir === 'random') d = DIRS[(Math.random() * 4) | 0];
+        else d = relDir(o, t.r, b.a.dir);
+        if (d) o.facing = d;
+      }
+      yield 0.1;
+    } },
+  tTp: { cat: '物件', def: { tgt: 'self' }, vs: ['x', 'y', 'l'],
+    parts: b => ['让', ...tgtParts(b), '瞬移到 (', { k: 'x', val: 1 }, ',', { k: 'y', val: 1 }, ') 第', { k: 'l', val: 1 }, '层'],
+    run: function* (b, vm) {
+      const x = +evalVal(b.a.x, vm) | 0, y = +evalVal(b.a.y, vm) | 0, l = +evalVal(b.a.l, vm) | 0;
+      for (const t of vm.targets(b.a.tgt, b.a.name)) {
+        if (t.kind === 'player') { P.layer = l; P.x = x; P.y = y; P.fade = 1; afterMove(); }
+        else if (t.r) { t.r.mv = null; t.obj.x = x; t.obj.y = y; t.obj.layer = l; t.r.x = x; t.r.y = y; t.r.layer = l; }
+      }
+      yield 0.05;
+    } },
+  tDmg: { cat: '物件', def: { tgt: 'nearest' }, vs: ['v'],
+    parts: b => ['让', ...tgtParts(b), '受到', { k: 'v', val: 1 }, '点伤害'],
+    run: function* (b, vm) {
+      const d = Math.max(0, +evalVal(b.a.v, vm) || 0);
+      for (const t of vm.targets(b.a.tgt, b.a.name)) {
+        if (t.kind === 'player') hurt(d, vm.kind === 'npc' ? vm.obj : null);
+        else if (t.r && !t.r.dead) { t.r.hp -= d; if (t.r.hp <= 0) killNpc(t.obj, t.r); else fireEv(t.obj, 'npc', 'hurt'); }
+      }
+      yield 0.05;
+    } },
+  tHeal: { cat: '物件', def: { tgt: 'self' }, vs: ['v'],
+    parts: b => ['让', ...tgtParts(b), '恢复', { k: 'v', val: 1 }, '点生命'],
+    run: function* (b, vm) {
+      const v = +evalVal(b.a.v, vm) || 0;
+      for (const t of vm.targets(b.a.tgt, b.a.name)) {
+        if (t.kind === 'player') P.hp = Math.min(P.maxhp, P.hp + v);
+        else if (t.r) t.r.hp = Math.min(t.obj.hp || 1, (t.r.hp || 0) + v);
+      }
+      yield 0.05;
+    } },
+  tKill: { cat: '物件', def: { tgt: 'nearest' }, parts: b => ['让', ...tgtParts(b), '倒下（会掉落）'],
+    run: function* (b, vm) {
+      for (const t of vm.targets(b.a.tgt, b.a.name)) {
+        if (t.kind === 'npc' && t.r && !t.r.dead) { t.r.hp = 0; killNpc(t.obj, t.r); }
+      }
+      yield 0.05;
+    } },
+  tRemove: { cat: '物件', def: { tgt: 'self' }, parts: b => ['删除', ...tgtParts(b), '（从地图上彻底消失）'],
+    run: function* (b, vm) {
+      for (const t of vm.targets(b.a.tgt, b.a.name)) if (t.kind === 'npc') removeNpc(t.obj);
+      yield 0.05;
+    } },
+  tVar: { cat: '物件', def: { tgt: 'nearest', name: 'A' }, vs: ['v'],
+    parts: b => ['把', ...tgtParts(b), '的变量', { k: 'name', str: 'A', w: 60 }, '设为', { k: 'v', val: 1 }],
+    run: function* (b, vm) {
+      const v = evalVal(b.a.v, vm);
+      for (const t of vm.targets(b.a.tgt, b.a.name)) {
+        if (t.kind === 'npc') { if (!t.r.vars) t.r.vars = {}; t.r.vars[b.a.name || 'A'] = v; }
+      }
+      yield 0.05;
+    } },
+  tVisible: { cat: '物件', def: { tgt: 'self', onoff: 'on' }, parts: b => ['让', ...tgtParts(b), { k: 'onoff', sel: ONOFF }, '（显示 / 隐身）'],
+    run: function* (b, vm) {
+      for (const t of vm.targets(b.a.tgt, b.a.name)) if (t.kind === 'npc') t.obj.invis = (b.a.onoff !== 'on');
+      yield 0.05;
+    } },
+  tLock: { cat: '物件', def: { tgt: 'nearest', v: 'lock' }, parts: b => ['把', ...tgtParts(b), { k: 'v', sel: LOCKO }],
+    run: function* (b, vm) {
+      for (const t of vm.targets(b.a.tgt, b.a.name)) { if (t.kind === 'npc') { t.obj.locked = (b.a.v === 'lock'); save(); } }
+      yield 0.05;
+    } },
+  tOpen: { cat: '物件', def: { tgt: 'nearest' }, parts: b => ['打开', ...tgtParts(b), '的容器界面'],
+    run: function* (b, vm) {
+      for (const t of vm.targets(b.a.tgt, b.a.name)) { if (t.kind === 'npc' && (t.obj.type === 'chest' || t.obj.chest)) { openChest(t.obj); break; } }
+      yield 0.2;
+    } },
+  clone: { cat: '物件', parts: ['克隆自己（克隆体出现在原地，并触发「当作为克隆体启动」）'],
+    run: function* (b, vm) { vm.cloneSelf(); yield 0.05; } },
+  broadcast: { cat: '物件', def: { msg: '消息1' }, parts: ['广播', { k: 'msg', str: '消息1', w: 90 }],
+    run: function* (b, vm) { fireBcast(b.a.msg || ''); yield 0.05; } },
+  broadcastWait: { cat: '物件', def: { msg: '消息1' }, parts: ['广播', { k: 'msg', str: '消息1', w: 90 }, '并等它们执行完'],
+    run: function* (b, vm) { yield* runBcast(b.a.msg || '', vm); yield 0.05; } },
+
+  /* ================= 世界（运行时改地图） ================= */
+  setWall: { cat: '世界', def: { onoff: 'on', d: 'n' }, vs: ['x', 'y', 'l'],
+    parts: ['把 (', { k: 'x', val: 1 }, ',', { k: 'y', val: 1 }, ') 第', { k: 'l', val: 1 }, '层的', { k: 'd', sel: DIR_ABS }, '面墙', { k: 'onoff', sel: [['on', '加上'], ['off', '去掉']] }],
+    run: function* (b, vm) {
+      const x = +evalVal(b.a.x, vm) | 0, y = +evalVal(b.a.y, vm) | 0, l = +evalVal(b.a.l, vm) | 0, d = b.a.d || 'n';
+      if (hasWall(l, x, y, d) !== (b.a.onoff === 'on')) toggleWall(l, x, y, d);
+      save(); yield 0.05;
+    } },
+  setPhoto: { cat: '世界', def: { d: 'n', img: '' }, vs: ['x', 'y', 'l'],
+    parts: ['把 (', { k: 'x', val: 1 }, ',', { k: 'y', val: 1 }, ') 第', { k: 'l', val: 1 }, '层朝', { k: 'd', sel: DIR_ABS }, '的照片换成', { k: 'img', img: 1 }],
+    run: function* (b, vm) {
+      setEdge(+evalVal(b.a.l, vm) | 0, +evalVal(b.a.x, vm) | 0, +evalVal(b.a.y, vm) | 0, b.a.d || 'n', b.a.img || '');
+      yield 0.05;
+    } },
+  setPortalAt: { cat: '世界', def: { d: 'n', dl: 1, dx: 0, dy: 0 }, vs: ['x', 'y', 'l'],
+    parts: ['在 (', { k: 'x', val: 1 }, ',', { k: 'y', val: 1 }, ') 第', { k: 'l', val: 1 }, '层朝', { k: 'd', sel: DIR_ABS },
+      '设楼梯：层差', { k: 'dl', num: 1, min: -9, max: 9, step: 1 }, '，落点偏移', { k: 'dx', num: 0 }, ',', { k: 'dy', num: 0 }],
+    run: function* (b, vm) {
+      setPortal(+evalVal(b.a.l, vm) | 0, +evalVal(b.a.x, vm) | 0, +evalVal(b.a.y, vm) | 0, b.a.d || 'n',
+        { dl: +b.a.dl | 0, dx: +b.a.dx | 0, dy: +b.a.dy | 0, al: null });
+      yield 0.05;
+    } },
+  clearCellXY: { cat: '世界', def: {}, vs: ['x', 'y', 'l'],
+    parts: ['清空 (', { k: 'x', val: 1 }, ',', { k: 'y', val: 1 }, ') 第', { k: 'l', val: 1 }, '层这一格（照片 / 楼梯 / 掉落）'],
+    run: function* (b, vm) {
+      const l = +evalVal(b.a.l, vm) | 0, x = +evalVal(b.a.x, vm) | 0, y = +evalVal(b.a.y, vm) | 0, k = ck(l, x, y);
+      delete S.cells[k]; delete S.drops[k];
+      DIRS.forEach(d => { delete S.portals[ek(l, x, y, d)]; delete S.walls[wallKey(l, x, y, d)]; });
+      save(); yield 0.05;
+    } },
+  spawnNpcAt: { cat: '世界', def: { n: 1 }, vs: ['x', 'y', 'l'],
+    parts: ['在 (', { k: 'x', val: 1 }, ',', { k: 'y', val: 1 }, ') 第', { k: 'l', val: 1 }, '层生成', { k: 'id', npc: 1 }, '×', { k: 'n', num: 1, min: 1, max: 10, step: 1 }],
+    run: function* (b, vm) {
+      const tpl = npcById(b.a.id); if (!tpl) return;
+      const x = +evalVal(b.a.x, vm) | 0, y = +evalVal(b.a.y, vm) | 0, l = +evalVal(b.a.l, vm) | 0;
+      const k = clamp(Math.round(+b.a.n || 1), 1, 10);
+      for (let i = 0; i < k; i++) {
+        const c = defNpc(JSON.parse(JSON.stringify(tpl)));
+        c.id = uid(); c.script = tpl.script ? JSON.parse(JSON.stringify(tpl.script)) : null;
+        c.x = x; c.y = y; c.layer = l; c.fromSpawn = true;
+        RS.push(c); const rr = rt(c); rr.hp = c.hp; rr.dead = false;
+      }
+      yield 0.05;
+    } },
+  setDark: { cat: '世界', def: {}, vs: ['v'],
+    parts: ['把黑暗程度设为', { k: 'v', val: 1 }, '（−1 = 恢复昼夜自动）'],
+    run: function* (b, vm) { const v = +evalVal(b.a.v, vm); P.darkOverride = (v < 0) ? null : clamp(v, 0, 1); yield 0.05; } },
+  shakeScr: { cat: '世界', def: {}, vs: ['v'], parts: ['屏幕震动', { k: 'v', val: 1 }],
+    run: function* (b, vm) { P.shake = clamp(+evalVal(b.a.v, vm) || 0, 0, 1.5); yield 0.05; } },
+
+  /* ================= 玩家 / 任务 / 结局 ================= */
+  setPlayerHp: { cat: '玩家', def: {}, vs: ['v'], parts: ['把玩家生命设为', { k: 'v', val: 1 }],
+    run: function* (b, vm) {
+      P.hp = clamp(+evalVal(b.a.v, vm) || 0, 0, P.maxhp);
+      if (P.hp <= 0) die(vm.kind === 'npc' ? vm.obj : null);
+      yield 0.05;
+    } },
+  setMaxHp: { cat: '玩家', def: {}, vs: ['v'], parts: ['把玩家生命上限设为', { k: 'v', val: 1 }],
+    run: function* (b, vm) { P.maxhp = Math.max(1, +evalVal(b.a.v, vm) || 1); P.hp = Math.min(P.hp, P.maxhp); yield 0.05; } },
+  lockPlayer: { cat: '玩家', def: { onoff: 'on' }, parts: ['玩家', { k: 'onoff', sel: [['on', '不能移动'], ['off', '恢复移动']] }],
+    run: function* (b, vm) { P.lock = (b.a.onoff === 'on'); yield 0.05; } },
+  playerTurn: { cat: '玩家', def: { dir: 'left' }, parts: ['让玩家', { k: 'dir', sel: [['left', '左转'], ['right', '右转'], ['back', '转身']] }],
+    run: function* (b, vm) { if (b.a.dir === 'back') { doTurn('left'); doTurn('left'); } else doTurn(b.a.dir); yield 0.05; } },
+  fadeScr: { cat: '玩家', parts: ['画面渐隐一次'],
+    run: function* (b, vm) { P.fade = 1; yield 0.12; } },
+  setHome: { cat: '玩家', def: {}, vs: ['x', 'y', 'l'],
+    parts: ['把玩家重生点设在 (', { k: 'x', val: 1 }, ',', { k: 'y', val: 1 }, ') 第', { k: 'l', val: 1 }, '层'],
+    run: function* (b, vm) {
+      P.home = { x: +evalVal(b.a.x, vm) | 0, y: +evalVal(b.a.y, vm) | 0, layer: +evalVal(b.a.l, vm) | 0, facing: P.facing };
+      yield 0.05;
+    } },
+  setTask: { cat: '玩家', def: { text: '找到那把钥匙' }, parts: ['🎯 显示任务', { k: 'text', str: '找到那把钥匙', w: 150 }],
+    run: function* (b, vm) { setTaskText(String(b.a.text || '')); yield 0.05; } },
+  clearTask: { cat: '玩家', parts: ['🎯 清除任务显示'],
+    run: function* (b, vm) { setTaskText(''); yield 0.05; } },
+  winGame: { cat: '玩家', def: { text: '你 赢 了' }, parts: ['🏆 宣布胜利：', { k: 'text', str: '你 赢 了', w: 120 }],
+    run: function* (b, vm) {
+      showShock('', b.a.text || '你 赢 了', [
+        { t: '继续逛逛', cls: 'primary', fn: () => {} },
+        { t: '退出', fn: () => { if (!Net.on) exitPlay(); } }
+      ]);
+      yield 0.3;
+    } },
+  loseGame: { cat: '玩家', def: { text: '你失败了' }, parts: ['💀 宣布失败：', { k: 'text', str: '你失败了', w: 120 }],
+    run: function* (b, vm) { P.hp = 0; die(vm.kind === 'npc' ? vm.obj : null); yield 0.2; } }
 };
-/* 积木面板上的文字标签 */
-function blkLabel(t) {
+/* 积木面板上的文字标签 / 动态部件 */
+function blkParts(d, b) {
+  if (typeof d.parts === 'function') {
+    const stub = b || { id: '', t: '', a: Object.assign({}, d.def || {}) };
+    try { return d.parts(stub) || []; } catch (e) { return []; }
+  }
+  return d.parts || [];
+}
+function blkLabel(t, b) {
   const d = BLK[t] || VAL[t];
+  if (!d) return String(t);
   if (d.label) return d.label;
-  return (d.parts || []).map(p => {
+  return blkParts(d, b).map(p => {
     if (typeof p === 'string') return p;
     if (p.val) return '()';
     if (p.sel) return '[…]';
     if (p.num !== undefined) return '[0]';
+    if (p.str !== undefined) return '[文本]';
     if (p.item) return '[物品]';
     if (p.npc) return '[NPC]';
     if (p.spawn) return '[出生点]';
+    if (p.proc) return '[过程]';
+    if (p.tgt) return '[目标]';
     if (p.img) return '[图]';
+    if (p.arg) return '()';
     return '[…]';
   }).join('');
 }
-function mkBlock(t) {
+function mkBlock(t, extra) {
   const d = BLK[t] || VAL[t];
   const b = { id: BUID(), t, a: Object.assign({}, d.def || {}) };
+  if (extra) Object.assign(b.a, extra);
   if (d.subs >= 1) b.do = [];
   if (d.subs >= 2) b.do2 = [];
+  if (d.dyn) b.a.args = [];
   (d.vs || []).forEach(k => { b.a[k] = { id: BUID(), t: 'v.num', a: { v: 0 } }; });
   return b;
+}
+function mkProc(name, args) {
+  return { id: 'p' + Math.random().toString(36).slice(2, 8), name: name || '我的积木', args: args || [], body: [] };
+}
+/* 广播：找出所有「当收到广播 X」的接收者 */
+function msgReceivers(msg) {
+  const out = [];
+  for (const n of allNpcs()) {
+    const sc = n.script; if (!sc || !sc.events) continue;
+    sc.events.forEach(e => { if (e.ev === 'msg' && (e.a.msg || '') === msg) out.push({ obj: n, kind: 'npc', r: rt(n), ev: e }); });
+  }
+  for (const it of S.items) {
+    const sc = it.script; if (!sc || !sc.events) continue;
+    sc.events.forEach(e => { if (e.ev === 'msg' && (e.a.msg || '') === msg) out.push({ obj: it, kind: 'item', r: itemRt(it.id), ev: e }); });
+  }
+  return out;
+}
+function* runBcast(msg, hostVm) {
+  for (const t of msgReceivers(msg)) {
+    const v2 = mkVM(t.obj, t.r, t.kind, t.ev);
+    v2.sender = hostVm || null;
+    try { yield* execSeq(t.ev.body || [], v2); } catch (e) { console.warn(e); }
+  }
+}
+function fireBcast(msg) {
+  for (const t of msgReceivers(msg)) startEv(t.obj, t.kind, t.ev);
+}
+function removeNpc(n) {
+  if (!n) return;
+  S.npcs = S.npcs.filter(q => q.id !== n.id);
+  const i = RS.findIndex(q => q.id === n.id);
+  if (i >= 0) RS.splice(i, 1);
+  RT.delete(n.id);
+  if (EC.npcSel === n.id) EC.npcSel = null;
+  updateInteract();
+}
+function* moveTargetN(t, rel, n) {
+  const k = clamp(Math.round(+n || 1), 1, 30);
+  for (let i = 0; i < k; i++) {
+    const d = relDir(t.obj, t.r, rel);
+    if (!d) break;
+    if (!npcStepTo(t.obj, t.r, d)) break;
+    let g = 0;
+    while (t.r && t.r.mv && g++ < 400) yield 0.05;
+  }
+}
+function setTaskText(t) {
+  const el = $('#taskTag');
+  if (!el) return;
+  if (!t) { el.classList.add('off'); el.textContent = ''; return; }
+  el.classList.remove('off');
+  el.textContent = '🎯 ' + t;
 }
 
 /* ---------------- 运行时：虚拟机 ---------------- */
@@ -1897,7 +2554,100 @@ function mkVM(obj, r, kind, ev) {
   const vm = {
     obj, r, kind, ev, stop: false, pick: null,
     vars: r.vars || (r.vars = {}),
+    /* —— 自定义积木（过程）调用栈 —— */
+    frames: [], depth: 0, ret: 0, procBreak: false, sender: null,
+    /* —— 参数 / 返回值 —— */
+    getArg(n) {
+      const f = vm.frames[vm.frames.length - 1];
+      if (f && Object.prototype.hasOwnProperty.call(f.args, n)) return f.args[n];
+      return 0;
+    },
+    callProc: function* (procId, argVals) {
+      const sc = obj && obj.script;
+      const p = ((sc && sc.procs) || []).find(q => q.id === procId) || null;
+      if (!p) return;
+      if (vm.depth >= 48) { console.warn('自定义积木递归太深，已停止'); return; }
+      const frame = { args: {} };
+      (p.args || []).forEach((nm, i) => { frame.args[nm] = evalVal(argVals[i], vm); });
+      vm.frames.push(frame); vm.depth++; vm.procBreak = false;
+      try { yield* execSeq(p.body || [], vm); }
+      finally { vm.frames.pop(); vm.depth--; vm.procBreak = false; }
+    },
+    callProcValue(procId, argVals) {
+      vm.ret = 0;
+      const gen = vm.callProc(procId, argVals);
+      let g = 0;
+      try { while (g++ < 100000) { const r = gen.next(); if (r.done) break; } } catch (e) { console.warn(e); }
+      return vm.ret === undefined ? 0 : vm.ret;
+    },
+    stopAll() {
+      const rr = (kind === 'npc') ? rt(obj) : itemRt(obj.id);
+      rr.threads.forEach(t => { t.done = true; });
+      rr._halt = P.t + 0.5;
+      vm.stop = true;
+    },
+    /* —— 列表 —— */
+    getList(n) {
+      const nm = n || 'L';
+      if (!r.lists) r.lists = {};
+      if (!r.lists[nm]) r.lists[nm] = [];
+      return r.lists[nm];
+    },
+    setList(n, arr) {
+      const nm = n || 'L';
+      if (!r.lists) r.lists = {};
+      r.lists[nm] = arr || [];
+    },
+    delVar(n) { delete vm.vars[n]; const f = vm.frames[vm.frames.length - 1]; if (f) delete f.args[n]; },
+    /* —— 目标选择 —— */
+    targets(sel, name) {
+      const out = [];
+      if (sel === 'player') return [{ kind: 'player' }];
+      if (sel === 'self') return [{ kind, obj, r }];
+      const list = allNpcs();
+      if (sel === 'nearest') {
+        if (kind !== 'npc') return [{ kind: 'player' }];
+        let best = null, bd = 1e9;
+        for (const n of list) {
+          const rr = rt(n);
+          if (rr.dead || n === obj || rr.layer !== r.layer) continue;
+          const d = Math.hypot((rr.x || 0) - r.x, (rr.y || 0) - r.y);
+          if (d < bd) { bd = d; best = { kind: 'npc', obj: n, r: rr }; }
+        }
+        return best ? [best] : [];
+      }
+      if (sel === 'all' || sel === 'allObj') {
+        list.forEach(n => {
+          if (n === obj) return;
+          const rr = rt(n); if (rr.dead) return;
+          if (sel === 'all' && (n.type || 'normal') !== 'normal') return;
+          out.push({ kind: 'npc', obj: n, r: rr });
+        });
+        return out;
+      }
+      if (sel === 'named') {
+        list.forEach(n => { if (n !== obj && n.name === name) out.push({ kind: 'npc', obj: n, r: rt(n) }); });
+        return out;
+      }
+      return out;
+    },
+    /* —— 克隆 —— */
+    cloneSelf() {
+      if (isItem) return;
+      const c = defNpc(JSON.parse(JSON.stringify(obj)));
+      c.id = uid();
+      c.script = obj.script ? JSON.parse(JSON.stringify(obj.script)) : null;
+      c.x = Math.round(r.x); c.y = Math.round(r.y); c.layer = r.layer;
+      c.isClone = true;
+      RS.push(c);
+      const rr = rt(c); rr.hp = c.hp; rr.dead = false;
+      fireEv(c, 'npc', 'clone');
+    },
     dist() { if (isItem) return 0; return Math.hypot((r.x || 0) - P.x, (r.y || 0) - P.y) + (r.layer === P.layer ? 0 : 99); },
+    wallDir(d) {
+      if (isItem) return hasWall(P.layer, P.x, P.y, d);
+      return blocked(r.layer, Math.round(r.x), Math.round(r.y), d);
+    },
     wallAhead() {
       if (isItem) return hasWall(P.layer, P.x, P.y, P.facing);
       return blocked(r.layer, Math.round(r.x), Math.round(r.y), obj.facing || 'n');
@@ -1953,6 +2703,15 @@ function mkVM(obj, r, kind, ev) {
       if (ex) ex.count += c; else S.drops[k].push({ id, count: c });
       save(); updateInteract();
     },
+    dropAtXY(id, n, x, y, l) {
+      if (!id) return;
+      const k = ck(l | 0, x | 0, y | 0);
+      if (!S.drops[k]) S.drops[k] = [];
+      const c = clamp(Math.round(+n || 1), 1, 9999);
+      const ex = S.drops[k].find(q => q.id === id);
+      if (ex) ex.count += c; else S.drops[k].push({ id, count: c });
+      save(); updateInteract();
+    },
     dmgPlayer(v) { hurt(Math.max(0, +v || 0), isItem ? null : obj); },
     heal(v) { if (isItem) { P.hp = Math.min(P.maxhp, P.hp + (+v || 0)); return; } r.hp = Math.min(obj.hp || 1, (r.hp || 0) + (+v || 0)); },
     putSelf(id, n) {
@@ -1986,7 +2745,7 @@ function* execSeq(list, vm) {
   for (let i = 0; i < list.length; i++) {
     const b = list[i]; if (!b) continue;
     yield* execBlock(b, vm);
-    if (vm.stop) return;
+    if (vm.stop || vm.procBreak) return;
   }
 }
 function* execBlock(b, vm) {
@@ -2032,6 +2791,7 @@ function scriptTick(obj, kind, dt) {
   const r = (kind === 'npc') ? rt(obj) : itemRt(obj.id);
   if (!sc || !sc.events || !sc.events.length) return;
   if (!r._on) r._on = {}; if (!r._tm) r._tm = {}; if (!r.vars) r.vars = {};
+  if (r._halt && P.t < r._halt) return;      /* 「停止全部脚本」后的短暂静默 */
   const vm = mkVM(obj, r, kind, null);
   for (const ev of sc.events) {
     switch (ev.ev) {
@@ -2062,11 +2822,45 @@ function scriptTick(obj, kind, dt) {
         if (on && !r._on[ev.id]) startEv(obj, kind, ev);
         r._on[ev.id] = on; break;
       }
-      case 'var': {
+      case 'var':
+      case 'gvar': {
         const on = cmpVal(evalVal(ev.a.l, vm), ev.a.op || '>', evalVal(ev.a.r, vm));
         if (on && !r._on[ev.id]) startEv(obj, kind, ev);
         r._on[ev.id] = on; break;
       }
+      case 'key': {
+        const k = String(ev.a.key || 'e').toLowerCase();
+        const on = !!KEYS[k];
+        if (on && !r._on[ev.id]) startEv(obj, kind, ev);
+        r._on[ev.id] = on; break;
+      }
+      case 'atTime': {
+        const h = Math.round(+ev.a.h || 0) % 24;
+        const on = Math.floor(P.time) === h;
+        if (on && !r._on[ev.id]) startEv(obj, kind, ev);
+        r._on[ev.id] = on; break;
+      }
+      case 'day': {
+        const on = darkness() < 0.25;
+        if (on && !r._on[ev.id]) startEv(obj, kind, ev);
+        r._on[ev.id] = on; break;
+      }
+      case 'night': {
+        const on = darkness() > 0.6;
+        if (on && !r._on[ev.id]) startEv(obj, kind, ev);
+        r._on[ev.id] = on; break;
+      }
+      case 'chat': {
+        if (r._lc === undefined) { r._lc = NETEV.chat; break; }
+        if (NETEV.chat !== r._lc) { r._lc = NETEV.chat; startEv(obj, kind, ev); }
+        break;
+      }
+      case 'hurtOther': {
+        if (r._ds === undefined) { r._ds = NETEV.death; break; }
+        if (NETEV.death !== r._ds) { r._ds = NETEV.death; startEv(obj, kind, ev); }
+        break;
+      }
+      case 'msg': case 'clone': break;   /* 由广播 / 克隆自己触发 */
       default: break;
     }
   }
@@ -2076,20 +2870,120 @@ function scriptTick(obj, kind, dt) {
 }
 function scriptCount(obj) {
   const sc = obj && obj.script;
-  if (!sc || !sc.events) return 0;
+  if (!sc || (!sc.events && !sc.procs)) return 0;
   let n = 0;
   const walk = l => (l || []).forEach(b => { n++; if (b.do) walk(b.do); if (b.do2) walk(b.do2); });
-  sc.events.forEach(e => { n++; walk(e.body); });
+  (sc.events || []).forEach(e => { n++; walk(e.body); });
+  (sc.procs || []).forEach(p => { n++; walk(p.body); });
   return n;
 }
 
 /* ---------------- 积木编辑器 UI ---------------- */
 let DRAG = null, SE = null;
+const PALCATS = ['移动', '外观', '战斗', '物品', '世界', '控制', '运算', '数据', '我的积木', '侦测', '物件', '玩家'];
+/* —— 自定义积木（过程）—— */
+function procList() {
+  const sc = SE && SE.obj && SE.obj.script;
+  if (!sc) return [];
+  if (!sc.procs) sc.procs = [];
+  return sc.procs;
+}
+function procLabel(p) {
+  const as = (p.args || []).filter(x => String(x || '').trim());
+  return '⚙ ' + (p.name || '我的积木') + (as.length ? '（' + as.join('、') + '）' : '');
+}
+function newProc() {
+  const list = procList();
+  const p = mkProc('自定义积木 ' + (list.length + 1), []);
+  list.push(p);
+  SE.curProc = p.id; SE.cur = p.body; SE.palVal = false;
+  save();
+  if (SE.rebuild) SE.rebuild();
+  if (SE.rebuildPal) SE.rebuildPal();
+}
+function delProc(p) {
+  confirmBox('删除自定义积木', '「' + (p.name || '') + '」的定义会消失，正在调用它的积木会失效。确定删除？', () => {
+    const list = procList(); const i = list.indexOf(p);
+    if (i >= 0) list.splice(i, 1);
+    if (SE.curProc === p.id) { SE.curProc = null; SE.cur = (SE.obj.script.events[0] || {}).body || null; }
+    save(); SE.rebuild(); SE.rebuildPal();
+  });
+}
+function procBoxEl(p) {
+  const el = h('div', { class: 'procBox' + (SE.cur === p.body ? ' on' : '') });
+  const ph = h('div', { class: 'ph' });
+  ph.appendChild(h('span', { class: 'caps', txt: '定义' }));
+  ph.appendChild(h('input', { type: 'text', value: p.name || '', style: 'width:150px',
+    oninput: e => { p.name = e.target.value; save(); },
+    onchange: () => { save(); SE.rebuild(); SE.rebuildPal(); } }));
+  ph.appendChild(h('button', { class: 'mini', txt: '＋ 参数', onclick: () => { p.args = p.args || []; p.args.push('参数' + (p.args.length + 1)); save(); SE.rebuild(); SE.rebuildPal(); } }));
+  ph.appendChild(h('button', { class: 'mini', txt: '编辑这段', onclick: e => { e.stopPropagation(); SE.cur = p.body; SE.rebuild(); } }));
+  ph.appendChild(h('button', { class: 'danger', txt: '删除', onclick: e => { e.stopPropagation(); delProc(p); } }));
+  el.appendChild(ph);
+  const ar = h('div', { class: 'argRow' });
+  if (!(p.args || []).length) ar.appendChild(h('span', { class: 'hint', txt: '没有参数。在积木里用「参数 1」积木读取传进来的值。' }));
+  (p.args || []).forEach((nm, i) => {
+    ar.appendChild(h('span', { class: 'caps', txt: '参数' + (i + 1) }));
+    ar.appendChild(h('input', { type: 'text', value: nm, style: 'width:100px',
+      oninput: e => { p.args[i] = e.target.value; save(); },
+      onchange: () => { save(); SE.rebuild(); SE.rebuildPal(); } }));
+    ar.appendChild(h('button', { class: 'mini', txt: '✕', onclick: () => { p.args.splice(i, 1); save(); SE.rebuild(); SE.rebuildPal(); } }));
+  });
+  el.appendChild(ar);
+  el.appendChild(bodyEl(p.body));
+  el.addEventListener('click', e => {
+    if (e.target.closest('input,select,button,.blk,.vslot')) return;
+    if (SE.cur !== p.body) { SE.cur = p.body; SE.rebuild(); }
+  });
+  return el;
+}
+/* 当前正在编辑的积木列表（事件脚本 / 自定义积木体） */
+function seCurList() {
+  const obj = SE.obj;
+  obj.script = obj.script || { events: [] };
+  if (!obj.script.procs) obj.script.procs = [];
+  if (SE.curProc) { const p = curProc(SE.curProc); if (p) return p.body; SE.curProc = null; }
+  if (!obj.script.events.length) obj.script.events.push(mkEv(SE.kind === 'item' ? 'use' : 'interact'));
+  if (!SE.cur || !obj.script.events.some(e => e.body === SE.cur)) SE.cur = obj.script.events[0].body;
+  return SE.cur;
+}
+function seAddProc(id, valMode) {
+  const p = curProc(id); if (!p) { toast('找不到这个自定义积木'); return; }
+  const b = mkBlock(valMode ? 'v.call' : 'call');
+  b.a.proc = id; b.a.args = (p.args || []).map(() => null);
+  if (valMode) { seDropVal(b); return; }
+  seCurList().push(b); save(); SE.rebuild();
+}
+/* 把值积木放进「上次点过的槽」，没有就提示 */
+function seDropVal(b) {
+  const s = SE.lastSlot;
+  if (s && s.holder && s.key !== undefined) { s.holder[s.key] = b; save(); SE.rebuild(); toast('已放进槽里'); return true; }
+  toast('值积木要放进圆角槽：先点一下槽，或直接把它拖进槽里');
+  return false;
+}
+function seAdd(t) {
+  const obj = SE.obj;
+  obj.script = obj.script || { events: [] };
+  if (VAL[t]) { seDropVal(mkBlock(t)); return; }
+  seCurList().push(mkBlock(t));
+  save(); SE.rebuild();
+}
+/* 按当前拖拽内容生成新积木（支持自定义积木） */
+function mkFromDrag() {
+  if (DRAG && DRAG.mode === 'newProc') {
+    const p = curProc(DRAG.proc);
+    const b = mkBlock(DRAG.val ? 'v.call' : 'call');
+    b.a.proc = DRAG.proc;
+    b.a.args = ((p && p.args) || []).map(() => null);
+    return b;
+  }
+  return mkBlock(DRAG.t);
+}
 function openScriptEditor(kind, obj) {
   if (!obj.script) obj.script = { events: [] };
-  SE = { kind, obj, cur: null, rebuild: null };
+  if (!obj.script.procs) obj.script.procs = [];
   if (!obj.script.events.length) obj.script.events.push(mkEv(kind === 'item' ? 'use' : 'interact'));
-  SE.cur = obj.script.events[0].body;
+  SE = { kind, obj, cur: obj.script.events[0].body, curProc: null, palVal: false, q: '', focusQ: false, lastSlot: null, rebuild: null, rebuildPal: null };
   openModal('🧩 图形化编程 —— ' + (obj.name || (kind === 'item' ? '物品' : '物件')), m => {
     const wrap = h('div', { class: 'scrWrap' });
     const pal = h('div', { class: 'scrPal' });
@@ -2097,67 +2991,103 @@ function openScriptEditor(kind, obj) {
     wrap.appendChild(pal); wrap.appendChild(main);
     m.body.appendChild(wrap);
 
-    /* 左侧积木面板 */
-    const cats = {};
-    Object.keys(BLK).forEach(t => { (cats[BLK[t].cat] = cats[BLK[t].cat] || []).push(t); });
-    ['移动', '控制', '外观', '战斗', '物品', '世界'].forEach(cn => {
-      if (!cats[cn]) return;
-      pal.appendChild(h('h5', { txt: cn }));
-      cats[cn].forEach(t => {
-        const b = h('button', { class: 'pb', txt: blkLabel(t) });
-        b.draggable = true;
-        b.addEventListener('dragstart', e => { DRAG = { mode: 'new', t }; try { e.dataTransfer.setData('text/plain', t); } catch (_) {} });
-        b.addEventListener('dragend', () => { DRAG = null; });
-        b.onclick = () => seAdd(t);
-        pal.appendChild(b);
-      });
-    });
-    pal.appendChild(h('h5', { txt: '值（填进圆角槽）' }));
-    Object.keys(VAL).forEach(t => {
-      const b = h('button', { class: 'pb', txt: blkLabel(t) });
+    /* 左侧积木面板：语句 / 值 两页，按分类分组，可搜索 */
+    const palBtn = t => {
+      const b = h('button', { class: 'pb', txt: blkLabel(t), title: t });
       b.draggable = true;
       b.addEventListener('dragstart', e => { DRAG = { mode: 'new', t }; try { e.dataTransfer.setData('text/plain', t); } catch (_) {} });
       b.addEventListener('dragend', () => { DRAG = null; });
       b.onclick = () => seAdd(t);
-      pal.appendChild(b);
-    });
+      return b;
+    };
+    const procBtns = (box, valMode, q) => {
+      procList().filter(p => !q || procLabel(p).indexOf(q) >= 0).forEach(p => {
+        const b = h('button', { class: 'pb proc', txt: procLabel(p) });
+        b.draggable = true;
+        b.addEventListener('dragstart', e => { DRAG = { mode: 'newProc', proc: p.id, val: valMode }; try { e.dataTransfer.setData('text/plain', 'P' + p.id); } catch (_) {} });
+        b.addEventListener('dragend', () => { DRAG = null; });
+        b.onclick = () => seAddProc(p.id, valMode);
+        box.appendChild(b);
+      });
+      if (!valMode) box.appendChild(h('button', { class: 'pb new', txt: '＋ 新建自定义积木', onclick: () => newProc() }));
+    };
+    const buildPal = valMode => {
+      clear(pal);
+      const pt = h('div', { class: 'scrTabs' });
+      pt.appendChild(h('button', { class: 'tab' + (valMode ? '' : ' on'), txt: '🧱 语句积木', onclick: () => { SE.palVal = false; buildPal(false); } }));
+      pt.appendChild(h('button', { class: 'tab' + (valMode ? ' on' : ''), txt: '🔢 值积木', onclick: () => { SE.palVal = true; buildPal(true); } }));
+      pal.appendChild(pt);
+      const qi = h('input', { type: 'text', placeholder: '🔍 搜索积木…', value: SE.q || '', style: 'width:100%;margin-bottom:5px' });
+      qi.oninput = e => { SE.q = e.target.value; SE.focusQ = true; buildPal(valMode); };
+      pal.appendChild(qi);
+      const q = (SE.q || '').trim();
+      const TAB = valMode ? VAL : BLK;
+      const cats = {};
+      Object.keys(TAB).forEach(t => {
+        if (!valMode && (t === 'call' || t === 'v.call')) return;   // 这两个由过程按钮代替
+        const c = TAB[t].cat || '其它';
+        (cats[c] = cats[c] || []).push(t);
+      });
+      const order = PALCATS.filter(c => cats[c]).concat(Object.keys(cats).filter(c => PALCATS.indexOf(c) < 0));
+      order.forEach(cn => {
+        const items = cats[cn].filter(t => !q || blkLabel(t).indexOf(q) >= 0 || t.indexOf(q) >= 0);
+        const pl = cn === '我的积木' ? procList().filter(p => !q || procLabel(p).indexOf(q) >= 0) : [];
+        if (!items.length && !pl.length) return;
+        pal.appendChild(h('h5', { txt: (valMode ? '值 · ' : '') + cn }));
+        items.forEach(t => pal.appendChild(palBtn(t)));
+        if (cn === '我的积木') procBtns(pal, valMode, q);
+      });
+      if (!pal.querySelector('h5')) pal.appendChild(h('div', { class: 'hint', txt: '没有匹配的积木' }));
+      if (SE.focusQ) { const i2 = pal.querySelector('input'); if (i2) { i2.focus(); try { i2.setSelectionRange(i2.value.length, i2.value.length); } catch (_) {} } SE.focusQ = false; }
+    };
 
-    /* 右侧脚本 */
+    /* 右侧脚本：事件页 / 自定义积木页 */
     const render = () => {
       clear(main);
       const obj2 = SE.obj;
-      const top = h('div', { class: 'row' });
-      const es = h('select', { style: 'width:auto;max-width:190px' },
-        Object.keys(EVDEF).filter(k => EVDEF[k][SE.kind]).map(k => h('option', { value: k, txt: EVDEF[k].n })));
-      top.appendChild(h('label', { txt: '事件' })); top.appendChild(es);
-      top.appendChild(h('button', { class: 'primary', txt: '+ 添加事件', onclick: () => {
-        const ev = mkEv(es.value); obj2.script.events.push(ev); SE.cur = ev.body; save(); render();
-      } }));
-      top.appendChild(h('button', { class: 'danger', txt: '清空全部', onclick: () => {
-        confirmBox('清空脚本', '这个' + (SE.kind === 'item' ? '物品' : '物件') + '的所有积木都会被删除。', () => {
-          obj2.script = { events: [] }; SE.cur = null; save(); render();
-        });
-      } }));
-      main.appendChild(top);
-      main.appendChild(h('div', { class: 'hint', txt: '高亮的那一串脚本 = 左键点积木会加进去。拖动积木可排序；拖到 C 形积木中间＝放进它里面。每个积木右边的 ▲▼✕ 也能用（手机可用）。' }));
-      if (!obj2.script.events.length) main.appendChild(h('div', { class: 'hint', txt: '（还没有事件）' }));
-      obj2.script.events.forEach(ev => main.appendChild(hatEl(ev, obj2)));
-      main.appendChild(h('div', { class: 'hint', txt: '共 ' + scriptCount(obj2) + ' 块积木 · ' + obj2.script.events.length + ' 个事件' }));
+      obj2.script = obj2.script || { events: [] };
+      if (!obj2.script.procs) obj2.script.procs = [];
+      const tabs = h('div', { class: 'scrTabs' });
+      tabs.appendChild(h('button', { class: 'tab' + (SE.curProc ? '' : ' on'), txt: '📜 事件脚本',
+        onclick: () => { SE.curProc = null; SE.cur = (obj2.script.events[0] || {}).body || null; render(); } }));
+      obj2.script.procs.forEach(p => tabs.appendChild(h('button', { class: 'tab' + (SE.curProc === p.id ? ' on' : ''), txt: procLabel(p),
+        onclick: () => { SE.curProc = p.id; SE.cur = p.body; render(); } })));
+      tabs.appendChild(h('button', { class: 'tab', txt: '＋ 新建自定义积木', onclick: () => newProc() }));
+      main.appendChild(tabs);
+
+      if (SE.curProc) {
+        const p = curProc(SE.curProc);
+        if (!p) { SE.curProc = null; SE.cur = (obj2.script.events[0] || {}).body || null; return render(); }
+        main.appendChild(procBoxEl(p));
+        main.appendChild(h('div', { class: 'hint', txt: '自定义积木可以被「调用 ⚙…」反复使用，也能自己调用自己（递归，最多 48 层）。用「参数 N」读传进来的值，用「返回值」把结果带回去。' }));
+      } else {
+        const top = h('div', { class: 'row' });
+        const es = h('select', { style: 'width:auto;max-width:190px' },
+          Object.keys(EVDEF).filter(k => EVDEF[k][SE.kind]).map(k => h('option', { value: k, txt: EVDEF[k].n })));
+        top.appendChild(h('label', { txt: '事件' })); top.appendChild(es);
+        top.appendChild(h('button', { class: 'primary', txt: '+ 添加事件', onclick: () => {
+          const ev = mkEv(es.value); obj2.script.events.push(ev); SE.cur = ev.body; save(); render();
+        } }));
+        top.appendChild(h('button', { class: 'danger', txt: '清空全部', onclick: () => {
+          confirmBox('清空脚本', '这个' + (SE.kind === 'item' ? '物品' : '物件') + '的所有事件积木都会被删除（自定义积木会保留）。', () => {
+            obj2.script.events = []; SE.cur = null; SE.lastSlot = null; save(); render();
+          });
+        } }));
+        main.appendChild(top);
+        main.appendChild(h('div', { class: 'hint', txt: '高亮的那一串脚本 = 左键点积木会加进去。拖动积木可排序；拖到 C 形积木中间＝放进它里面。每个积木右边的 ▲▼✕ 也能用（手机可用）。值积木要拖进圆角槽里。' }));
+        if (!obj2.script.events.length) main.appendChild(h('div', { class: 'hint', txt: '（还没有事件）' }));
+        obj2.script.events.forEach(ev => main.appendChild(hatEl(ev, obj2)));
+        main.appendChild(h('div', { class: 'hint', txt: '共 ' + scriptCount(obj2) + ' 块积木 · ' + obj2.script.events.length + ' 个事件 · ' + obj2.script.procs.length + ' 个自定义积木' }));
+      }
     };
     SE.rebuild = render;
+    SE.rebuildPal = () => buildPal(SE.palVal);
+    buildPal(false);
     render();
 
     m.foot.appendChild(h('button', { txt: '关闭', onclick: () => { m.close(); refresh(); } }));
     m.foot.appendChild(h('button', { class: 'primary', txt: '保存', onclick: () => { save(true); m.close(); refresh(); } }));
   }, { closeOnMask: false });
-}
-function seAdd(t) {
-  const obj = SE.obj;
-  obj.script = obj.script || { events: [] };
-  if (!obj.script.events.length) obj.script.events.push(mkEv(SE.kind === 'item' ? 'use' : 'interact'));
-  if (!SE.cur || !obj.script.events.some(e => e.body === SE.cur)) SE.cur = obj.script.events[0].body;
-  SE.cur.push(mkBlock(t));
-  save(); SE.rebuild();
 }
 function hatEl(ev, obj) {
   const el = h('div', { class: 'scriptHat' + (SE.cur === ev.body ? ' on' : '') });
@@ -2165,11 +3095,22 @@ function hatEl(ev, obj) {
   const sel = h('select', { onchange: e => { ev.ev = e.target.value; ev.a = evA(ev.ev); save(); SE.rebuild(); } },
     Object.keys(EVDEF).filter(k => EVDEF[k][SE.kind]).map(k => h('option', { value: k, selected: ev.ev === k, txt: EVDEF[k].n })));
   hh.appendChild(sel);
-  (EVDEF[ev.ev].p || []).forEach(p => {
-    hh.appendChild(h('span', { class: 'caps', txt: p.lbl }));
-    hh.appendChild(h('input', { type: 'number', value: ev.a[p.k], min: p.min, step: p.step, style: 'width:64px',
-      oninput: e => { ev.a[p.k] = +e.target.value || 0; save(); } }));
+  const ed = EVDEF[ev.ev] || {};
+  (ed.p || []).forEach(p => {   /* 旧存档补齐缺省参数 */
+    if (ev.a[p.k] === undefined) ev.a[p.k] = (p.str !== undefined) ? p.str : p.num;
   });
+  (ed.p || []).forEach(p => {
+    if (p.lbl) hh.appendChild(h('span', { class: 'caps', txt: p.lbl }));
+    if (p.str !== undefined) {
+      hh.appendChild(h('input', { type: 'text', value: ev.a[p.k] || '', style: 'width:' + (p.w || 96) + 'px',
+        placeholder: p.ph || '', oninput: e => { ev.a[p.k] = e.target.value; save(); } }));
+    } else {
+      hh.appendChild(h('input', { type: 'number', value: ev.a[p.k], min: p.min, max: p.max, step: p.step, style: 'width:64px',
+        oninput: e => { ev.a[p.k] = +e.target.value || 0; save(); } }));
+    }
+  });
+  if (ev.ev === 'key') hh.appendChild(h('span', { class: 'caps', txt: '（填字母/数字，如 e、f、1；方向键写 arrowup）' }));
+  if (ev.ev === 'msg') hh.appendChild(h('span', { class: 'caps', txt: '（和「广播」积木填一样的名字）' }));
   if (EVDEF[ev.ev].cond) {
     hh.appendChild(vslotEl(ev.a, 'l'));
     const os = h('select', { style: 'width:auto' }, CMP.map(o => h('option', { value: o[0], selected: (ev.a.op || '>') === o[0], txt: o[1] })));
@@ -2203,9 +3144,16 @@ function vslotEl(holder, key) {
     e.preventDefault(); e.stopPropagation(); el.classList.remove('over');
     if (!DRAG) return;
     let nb;
-    if (DRAG.mode === 'new') nb = mkBlock(DRAG.t);
-    else { nb = DRAG.b; const ol = DRAG.list; if (ol) { const i = ol.indexOf(DRAG.b); if (i >= 0) ol.splice(i, 1); } }
+    if (DRAG.mode === 'move') { nb = DRAG.b; const ol = DRAG.list; if (ol) { const i = ol.indexOf(DRAG.b); if (i >= 0) ol.splice(i, 1); } }
+    else nb = mkFromDrag();
+    if (nb && !VAL[nb.t]) { toast('圆角槽里只能放「值积木」（在左边切到值积木页）'); return; }
     holder[key] = nb; save(); SE.rebuild();
+  });
+  el.addEventListener('click', e => {
+    e.stopPropagation();
+    document.querySelectorAll('.vslot.on').forEach(x => x.classList.remove('on'));
+    el.classList.add('on');
+    SE.lastSlot = { holder, key };
   });
   return el;
 }
@@ -2219,14 +3167,32 @@ function bodyEl(list) {
 }
 function blkEl(b, list, holder, key) {
   const d = BLK[b.t] || VAL[b.t];
+  if (!d) return h('div', { class: 'blk', txt: '（未知积木 ' + b.t + '）' });
   const isVal = !!VAL[b.t];
   const el = h('div', { class: 'blk' + (isVal ? ' val' : '') + (d.subs ? ' cblk' : '') });
   el.draggable = true;
   el.addEventListener('dragstart', e => { DRAG = { mode: 'move', b, list: list || null }; e.stopPropagation(); try { e.dataTransfer.setData('text/plain', 'b'); } catch (_) {} });
   el.addEventListener('dragend', () => { DRAG = null; });
-  (d.parts || []).forEach(p => {
+  const parts = blkParts(d, b);
+  parts.forEach(p => {
     if (typeof p === 'string') { el.appendChild(h('span', { txt: p })); return; }
     if (p.val) { el.appendChild(vslotEl(b.a, p.k)); return; }
+    if (p.proc) {   /* 选一个自定义积木 */
+      const s = h('select', {}, h('option', { value: '', txt: '（选自定义积木）' }),
+        ...procList().map(o => h('option', { value: o.id, selected: b.a[p.k] === o.id, txt: o.name || '我的积木' })));
+      s.onchange = e => { b.a[p.k] = e.target.value; const q = curProc(e.target.value); b.a.args = ((q && q.args) || []).map(() => null); save(); SE.rebuild(); };
+      el.appendChild(s); return;
+    }
+    if (p.tgt) {    /* 目标选择器：自己 / 玩家 / 最近 / 全部 / 叫某名字 */
+      const s = h('select', {}, p.sel.map(o => h('option', { value: o[0], selected: (b.a[p.k] || 'self') === o[0], txt: o[1] })));
+      s.onchange = e => { b.a[p.k] = e.target.value; save(); SE.rebuild(); };
+      el.appendChild(s); return;
+    }
+    if (p.arg) {    /* 自定义积木的参数槽 */
+      if (!Array.isArray(b.a.args)) b.a.args = [];
+      el.appendChild(vslotEl(b.a.args, p.i));
+      return;
+    }
     if (p.sel) {
       const s = h('select', {}, p.sel.map(o => h('option', { value: o[0], selected: b.a[p.k] === o[0], txt: o[1] })));
       s.onchange = e => { b.a[p.k] = e.target.value; save(); };
@@ -2326,13 +3292,13 @@ function hasSub(b, list) {
 function dropInto(list, targetB, pos) {
   if (!DRAG || !list) return;
   let blk;
-  if (DRAG.mode === 'new') blk = mkBlock(DRAG.t);
-  else {
+  if (DRAG.mode === 'move') {
     blk = DRAG.b;
     if (hasSub(blk, list)) { toast('不能把积木拖进它自己里面'); return; }
     const ol = DRAG.list;
     if (ol) { const i = ol.indexOf(blk); if (i >= 0) ol.splice(i, 1); }
-  }
+  } else blk = mkFromDrag();
+  if (VAL[blk.t]) { toast('值积木要拖进圆角槽里'); return; }
   let at = list.length;
   if (pos !== 'inside' && targetB) { const ti = list.indexOf(targetB); if (ti >= 0) at = ti + (pos === 'after' ? 1 : 0); }
   list.splice(at, 0, blk);
@@ -2349,7 +3315,9 @@ const P = {
   torch: false, battery: 100, flare: 0,
   t: 0, lastAtk: -99, lastHurt: -99, atkAnim: 0,
   fade: 0, prev: null, shake: 0, dead: false, showMap: true, shockCd: 0,
-  god: false, respawnAt: 0, killer: null, kills: 0, deaths: 0, home: null, warmT: 0
+  god: false, respawnAt: 0, killer: null, kills: 0, deaths: 0, home: null, warmT: 0,
+  /* 脚本可控字段 */
+  lock: false, darkOverride: null, task: ''
 };
 const RT = new Map();      // 物件运行时状态
 const RS = [];             // 运行时生成的怪（刷怪点）
@@ -2409,7 +3377,18 @@ function maskCanvas(W, H) {
 /* ---------------- 进入 / 退出 ---------------- */
 function resetRuntime() {
   RT.clear(); RS.length = 0; IT.clear();
-  allNpcs().forEach(n => { const r = rt(n); r.hp = n.hp; r.open = !!n.startOpen; r.fuel = n.fuel; r.timer = n.delay || 0; r.lit = !!n.litOn; r.dead = false; r.mv = null; });
+  /* 清空脚本全局状态：全局变量 / 按键 / 询问 / 事件计数 / 列表 */
+  for (const k in GVAR) delete GVAR[k];
+  for (const k in KEYS) delete KEYS[k];
+  ASK.v = null;
+  NETEV.chat = 0; NETEV.death = 0; NETEV.chatName = ''; NETEV.chatText = '';
+  allNpcs().forEach(n => {
+    const r = rt(n);
+    r.hp = n.hp; r.open = !!n.startOpen; r.fuel = n.fuel; r.timer = n.delay || 0; r.lit = !!n.litOn; r.dead = false; r.mv = null;
+    r.threads = []; r.vars = {}; r.lists = {}; r._on = {}; r._tm = {}; r.say = null; r._halt = 0; r._lc = undefined; r._ds = undefined;
+  });
+  P.lock = false; P.darkOverride = null; P.shake = 0;
+  setTaskText('');
 }
 function enterPlay(spawn) {
   resetRuntime();
@@ -2487,12 +3466,14 @@ function openSpawnChoice(cb, title) {
 function afterMove() { netSend(); updateInteract(); }
 function doTurn(which) {
   if (P.dead) return;
+  if (P.lock) { toast('现在动不了（被脚本锁住了）'); return; }
   P.prev = { l: P.layer, x: P.x, y: P.y, d: P.facing };
   P.facing = which === 'left' ? CCW[P.facing] : CW[P.facing];
   P.fade = 1; P.shake = 0.05; afterMove();
 }
 function doMove(sign) {
   if (P.dead) return;
+  if (P.lock) { toast('现在走不动（被脚本锁住了）'); return; }
   const d = sign > 0 ? P.facing : OPP[P.facing];
   P.prev = { l: P.layer, x: P.x, y: P.y, d: P.facing };
   const pt = S.portals[ek(P.layer, P.x, P.y, d)];
@@ -2697,6 +3678,7 @@ function doAttack() {
 }
 function killNpc(n, r) {
   r.dead = true; P.kills++;
+  NETEV.death++;
   fireEv(n, 'npc', 'death');
   const k = ck(r.layer, Math.round(r.x), Math.round(r.y));
   if (n.drops && n.drops.length) {
@@ -3169,6 +4151,7 @@ function update(dt) {
   if (P.god) godTick(dt);
 }
 function darkness() {
+  if (P.darkOverride !== null && P.darkOverride !== undefined) return P.darkOverride;
   const m = S.settings.night;
   if (m === 'off') return 0;
   if (m === 'always') return 0.94;
@@ -3552,7 +4535,11 @@ function netRecv(m) {
     else Net.peers.set(m.id, { name: '?', x: 0, y: 0, layer: 0, f: 'n', imgs: m.imgs || {}, ts: Date.now() });
     return;
   }
-  if (m.t === 'c') { addChat(m.text || '', m.name || '?', ''); return; }
+  if (m.t === 'c') {
+    addChat(m.text || '', m.name || '?', '');
+    NETEV.chat++; NETEV.chatName = m.name || '?'; NETEV.chatText = m.text || '';
+    return;
+  }
   if (m.t === 'p') {
     Net.pings.push({ x: m.x | 0, y: m.y | 0, l: m.l | 0, t: Date.now() });
     if (Net.pings.length > 20) Net.pings.shift();
@@ -3622,6 +4609,7 @@ function addChat(text, who, cls) {
 function netChat(text) {
   if (!text) return;
   addChat(text, '我', 'me');
+  NETEV.chat++; NETEV.chatName = Net.name || '我'; NETEV.chatText = text;
   if (Net.on) netSendRaw({ t: 'c', id: Net.id, name: Net.name, text });
 }
 function openChat() {
@@ -4177,12 +5165,18 @@ function openHelp() {
       '<b>一、做地图</b><br>' +
       '· 无限正方点阵：拖拽平移、滚轮缩放、右键擦除。<br>' +
       '· 「🖼 照片」点格子里<b>靠内侧的一条边</b>上传该方向的照片；四条边各自独立。<br>' +
-      '· 「🧱 墙」点边界线设置障碍；「🌀 楼梯」点边可<b>任意</b>指定上/下几层与落点偏移（还能一键生成回程）。<br>' +
+      '· 「🧱 墙」点边界线设置障碍；「🌀 楼梯」点边弹出<b>双小地图</b>：左边是出发层（黄框＋箭头），<b>在右边地图上点一格</b>就是落点，可任意跨层、任意偏移，还能一键生成回程。<br>' +
       '· 「👤 物件」支持 NPC、箱、床、灯、篝火、告示牌、门、陷阱、商人、传送阵、刷怪点，每种都有详细设置。<br>' +
       '· 「🚩 出生点」可放多个，联机时玩家自己挑一个落地。<br>' +
       '· 「🎁 地面物」点格子可以往地上放物品；物品面板里也有「📍 放置」，可以放到地面或某个箱子里。<br>' +
       '· 「🎯 透视校准」：对准你照片的地平线，调 NPC 在你正前方 1 格处的大小 / 高度 / 脚底位置；可以按层单独校准，数据随工程导出。<br>' +
-      '· 「🧩 图形化编程」：物件和物品都能拖积木写逻辑（移动、追击、条件、循环、变量、弹界面、给物品、传送、音效……）。物件的行为选「脚本控制」即可让脚本接管 AI。<br><br>' +
+      '· 「🧩 图形化编程」：物件和物品都能拖积木写逻辑。物件的行为选「脚本控制」即可让脚本接管 AI。<br>' +
+      '&nbsp;&nbsp;· 分类：<b>移动 / 外观 / 战斗 / 物品 / 世界 / 控制 / 运算 / 数据 / 我的积木 / 侦测 / 物件 / 玩家</b>，左侧面板可切「语句 / 值」两页并搜索。<br>' +
+      '&nbsp;&nbsp;· <b>我的积木</b>＝自定义过程：可带参数、可递归、可返回值，配合「如果…那么…否则」「重复直到」「等待直到」——和图灵机一样能算任何东西。<br>' +
+      '&nbsp;&nbsp;· <b>数据</b>：变量、列表（增删查改）、全局变量（所有物件共享）。<b>侦测</b>：按键、询问回答、时间、亮度、前方是否有墙、玩家/NPC 坐标与血量、聊天内容等。<br>' +
+      '&nbsp;&nbsp;· <b>物件</b>：用「作用于 自己/玩家/最近的 NPC/全部/叫××的」去指挥别的角色——让它说台词、移动、转向、传送、受伤、加血、消失、克隆、改变量。<br>' +
+      '&nbsp;&nbsp;· <b>世界</b>：运行时改墙、换照片、设楼梯、清空格子、刷怪、调亮度、震屏。<b>玩家</b>：锁住/解锁移动、设血量与上限、转身、转场、设重生点、显示任务、宣布胜利/失败。<br>' +
+      '&nbsp;&nbsp;· <b>广播</b>＋「当收到广播」＝跨物件通信；「克隆」＋「当作为克隆体启动」＝分身；还有天黑/天亮/整点/按键/有人发言/有人倒下等事件。<br><br>' +
       '<b>二、玩</b><br>' +
       '· 全屏显示当前格朝向上的照片。⟲⟳ 转身，↑↓ 前进/后退；手机可直接滑动。<br>' +
       '· 键盘：<kbd>WASD</kbd>/方向键，<kbd>空格</kbd>攻击，<kbd>E</kbd>交互，<kbd>1-9</kbd>选物品，<kbd>Q</kbd>丢弃，<kbd>I</kbd>背包，<kbd>F</kbd>手电，<kbd>T</kbd>发言，<kbd>M</kbd>小地图，<kbd>Esc</kbd>退出。<br>' +
@@ -4402,7 +5396,10 @@ function bindPlayInput() {
   }, { passive: true });
 }
 function bindKeys() {
+  /* 供「按下某键？」积木查询的按键状态（全局记录，弹窗输入时也让脚本能读到） */
   document.addEventListener('keydown', e => {
+    const kk = (e.key || '').toLowerCase();
+    if (kk) { KEYS[kk] = 1; KEYS['_any'] = 1; }
     if ($('#modalRoot').classList.contains('show') || $('#shockRoot').classList.contains('show')) {
       if (e.key === 'Escape') { closeModal(); hideShock(); }
       return;
@@ -4430,6 +5427,8 @@ function bindKeys() {
       else exitPlay();
     }
   });
+  document.addEventListener('keyup', e => { const kk = (e.key || '').toLowerCase(); if (kk) KEYS[kk] = 0; });
+  window.addEventListener('blur', () => { for (const k in KEYS) KEYS[k] = 0; });
 }
 
 /* ---------------- 启动 ---------------- */
